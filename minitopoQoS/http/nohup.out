@@ -1,0 +1,20 @@
+Traceback (most recent call last):
+  File "./webserver.py", line 14, in <module>
+    httpd = SocketServer.TCPServer(("", PORT), Handler)
+  File "/usr/lib/python2.7/SocketServer.py", line 419, in __init__
+    self.server_bind()
+  File "/usr/lib/python2.7/SocketServer.py", line 430, in server_bind
+    self.socket.bind(self.server_address)
+  File "/usr/lib/python2.7/socket.py", line 224, in meth
+    return getattr(self._sock,name)(*args)
+socket.error: [Errno 13] Permission denied
+Traceback (most recent call last):
+  File "./webserver.py", line 14, in <module>
+    httpd = SocketServer.TCPServer(("", PORT), Handler)
+  File "/usr/lib/python2.7/SocketServer.py", line 419, in __init__
+    self.server_bind()
+  File "/usr/lib/python2.7/SocketServer.py", line 430, in server_bind
+    self.socket.bind(self.server_address)
+  File "/usr/lib/python2.7/socket.py", line 224, in meth
+    return getattr(self._sock,name)(*args)
+socket.error: [Errno 13] Permission denied

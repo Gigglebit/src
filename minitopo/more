@@ -1,0 +1,76 @@
+ovs-ofctl: OpenFlow switch management utility
+usage: ovs-ofctl [OPTIONS] COMMAND [ARG...]
+
+For OpenFlow switches:
+  show SWITCH                 show OpenFlow information
+  dump-desc SWITCH            print switch description
+  dump-tables SWITCH          print table stats
+  mod-port SWITCH IFACE ACT   modify port behavior
+  get-frags SWITCH            print fragment handling behavior
+  set-frags SWITCH FRAG_MODE  set fragment handling behavior
+  dump-ports SWITCH [PORT]    print port statistics
+  dump-ports-desc SWITCH      print port descriptions
+  dump-flows SWITCH           print all flow entries
+  dump-flows SWITCH FLOW      print matching FLOWs
+  dump-aggregate SWITCH       print aggregate flow statistics
+  dump-aggregate SWITCH FLOW  print aggregate stats for FLOWs
+  queue-stats SWITCH [PORT [QUEUE]]  dump queue stats
+  add-flow SWITCH FLOW        add flow described by FLOW
+  add-flows SWITCH FILE       add flows from FILE
+  mod-flows SWITCH FLOW       modify actions of matching FLOWs
+  del-flows SWITCH [FLOW]     delete matching FLOWs
+  replace-flows SWITCH FILE   replace flows with those in FILE
+  diff-flows SOURCE1 SOURCE2  compare flows from two sources
+  packet-out SWITCH IN_PORT ACTIONS PACKET...
+                              execute ACTIONS on PACKET
+  monitor SWITCH [MISSLEN] [invalid_ttl] [watch:[...]]
+                              print packets received from SWITCH
+  snoop SWITCH                snoop on SWITCH and its controller
+
+For OpenFlow switches and controllers:
+  probe TARGET                probe whether TARGET is up
+  ping TARGET [N]             latency of N-byte echos
+  benchmark TARGET N COUNT    bandwidth of COUNT N-byte echos
+SWITCH or TARGET is an active OpenFlow connection method.
+
+Other commands:
+  ofp-parse FILE              print messages read from FILE
+
+Active OpenFlow connection methods:
+  tcp:IP[:PORT]           PORT (default: 6633) at remote IP
+  ssl:IP[:PORT]           SSL PORT (default: 6633) at remote IP
+  unix:FILE               Unix domain socket named FILE
+PKI configuration (required to use SSL):
+  -p, --private-key=FILE  file with private key
+  -c, --certificate=FILE  file with certificate for private key
+  -C, --ca-cert=FILE      file with peer CA certificate
+
+Daemon options:
+  --detach                run in background as daemon
+  --no-chdir              do not chdir to '/'
+  --pidfile[=FILE]        create pidfile (default: /var/run/openvswitch/ovs-ofctl.pid)
+  --overwrite-pidfile     with --pidfile, start even if already running
+
+Open Flow Version options:
+  -V, --version           display version information
+  -O, --protocols         set allowed Open Flow versions
+                          (default: OpenFlow10)
+
+Logging options:
+  -v, --verbose=[SPEC]    set logging levels
+  -v, --verbose           set maximum verbosity level
+  --log-file[=FILE]       enable logging to specified FILE
+                          (default: /var/log/openvswitch/ovs-ofctl.log)
+
+Other options:
+  --strict                    use strict match for flow commands
+  --readd                     replace flows that haven't changed
+  -F, --flow-format=FORMAT    force particular flow format
+  -P, --packet-in-format=FRMT force particular packet in format
+  -m, --more                  be more verbose printing OpenFlow
+  --timestamp                 (monitor, snoop) print timestamps
+  -t, --timeout=SECS          give up after SECS seconds
+  --sort[=field]              sort in ascending order
+  --rsort[=field]             sort in descending order
+  -h, --help                  display this help message
+  -V, --version               display version information
