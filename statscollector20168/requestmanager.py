@@ -38,7 +38,7 @@ def cal_bw_delay(entries_range,idx,path,link_cap,tc_result):
 		l=[]
 		#link counter which indicates the current link index in link_cap
 		link_ct = 0
-		if (i-1) in tc_result:
+		if (i-1) in tc_result and i in tc_result:
 			l.append(i)
 			j = path[0]
 			l.append(rnd(float(tc_result[i][j]['delta_t']),3))
@@ -47,8 +47,8 @@ def cal_bw_delay(entries_range,idx,path,link_cap,tc_result):
 				l.append(int(tc_result[i][j]['BackB']))
 				l.append(int(tc_result[i][j]['SentB']) - int(tc_result[i-1][j]['SentB']))
 				l.append(float(link_cap[link_ct]))
-				for key, value in tc_result[i].iteritems() :
-    					print key, value
+				# for key, value in tc_result[i].iteritems() :
+    # 					print key, value
 				if j == path[0] and 'P_Delay' in tc_result[i][path[2]]:
 					l.append(rnd(float(tc_result[i][path[2]]['P_Delay']), 3))
 				else:
@@ -108,8 +108,8 @@ def requestmanager(path,link_cap,earliest_idx,num_entries):
 		tclock.acquire()
 		tc_result = tc_dict
 		index = myGlobal.idx-1
-		tclock.release()		
 		l = resolve_idx(path,earliest_idx,num_entries,link_cap,index,tc_result)
+		tclock.release()
 		return l
 	else:
 		return [" "]
@@ -160,17 +160,23 @@ def start_monitor(e):
 		t1.setName('TControl')
 		t2 = Timer1(e,0.05,counter)
 		t2.setName('Timer1')
+		t3 = QoSTimer(e,counter)
+		t3.setName('QoSTimer')
 		t1.daemon = True
+		t3.daemon = True
 		threads.append(t1)
 		threads.append(t2)
+		threads.append(t3)
 		t1.start()
 		t2.start()
+		t3.start()
 		monitor_run = True
 	else:
 		#print "----reset threads-----"
 	 	#print threads
 		threads[0].reset()
 		threads[1].reset()
+		threads[2].reset()
 
 
 if __name__ == '__main__':

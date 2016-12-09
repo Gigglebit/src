@@ -185,6 +185,7 @@ def detectflows(intf, servIP, portRange, cToS):
            if int(elem[6].split('=')[1]) < 1:
                if (cToS):
                     servPort = elem[-1].split(' ')[0].split('=')[1]
+                    print "this server port and port range are"
                     print servPort,portTrueRange
                     if IPAddress(elem[-4].split('=')[1]) in IPNetwork(servIP) and int(servPort) in portTrueRange:
                             flow = {'serverIP':elem[-4].split('=')[1], 'serverPort':servPort, 'clientIP':elem[-5].split('=')[1], 'clientPort':elem[-2].split('=')[1], 'durations':elem[1].split('=')[1], 'packets':elem[3].split('=')[1], 'bytes':elem[4].split('=')[1], 'outPort':elem[-1].split(' ')[1].split(':')[1],'lowDelay':True}
@@ -196,7 +197,8 @@ def detectflows(intf, servIP, portRange, cToS):
                             #print flow      
                else:
                     servPort = elem[-2].split('=')[1]
-                    print servPort
+                    print "this server port and port range are"
+                    print servPort,portTrueRange
                     if IPAddress(elem[-5].split('=')[1]) in IPNetwork(servIP) and int(servPort) in portTrueRange:
                             flow = {'serverIP':elem[-5].split('=')[1], 'serverPort':servPort, 'clientIP':elem[-4].split('=')[1], 'clientPort':elem[-1].split(' ')[0].split('=')[1], 'durations':elem[1].split('=')[1], 'packets':elem[3].split('=')[1], 'bytes':elem[4].split('=')[1], 'outPort':elem[-1].split(' ')[1].split(':')[1],'lowDelay':True}
                             flows.append(flow)
@@ -296,7 +298,7 @@ class TControl(threading.Thread):
         try:
             while self.keeprunning > 0:
                 tcshow(self.event)
-                intflist = 's1-eth2,s2-eth2'
+                intflist = 's1-eth2'
                 #applyQdiscMgmt(intflist,'10.0.0.3/32','5001-5002','True','0.15')
                 self.keeprunning-=1
         except KeyboardInterrupt:
@@ -322,8 +324,9 @@ class QoSTimer(threading.Thread):
     def run(self):
         try:
             while self.keeprunning > 0:
-                intflist = 's1-eth2,s2-eth2'
-                applyQdiscMgmt(intflist,'10.0.0.3/32','5001-5002','True','0.15')
+                intflist = 's1-eth2'
+                #linkcap = 0.5
+                applyQdiscMgmt(intflist,'10.0.0.2/32','8000','False','5')
                 #self.keeprunning-=1
         except KeyboardInterrupt:
             print "stoptimer"

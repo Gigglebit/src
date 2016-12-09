@@ -37,6 +37,7 @@ def get_path_stats(start_ip, end_ip,earliest_idx,num_entries):
 @route("/stats/showqos", method='GET')
 def get_qos():
    qos_stats = []
+   # start_QoS()
    result = dumps(qos_stats)
    return result 
 
