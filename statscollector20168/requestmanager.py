@@ -163,6 +163,7 @@ def start_monitor(e):
 		t3 = QoSTimer(e,counter)
 		t3.setName('QoSTimer')
 		t1.daemon = True
+		t2.daemon = True
 		t3.daemon = True
 		threads.append(t1)
 		threads.append(t2)

@@ -26,10 +26,10 @@ MAX_BUF = 100
 tc_dict ={}
 
 #Dictionary possible keys
-entry_keys = ['RootNo','Dev','SentB','SentP','DroppedP','OverlimitsB','Requeues','BackB','BackP']
+entry_keys = ['RootNo','SentB','SentP','DroppedP','OverlimitsB','Requeues','BackB','BackP']
 
 #Child queue possible keys
-netem_keys = ['RootNo','Dev','Parent','Q_Depth','P_Delay','SentB','SentP','DroppedP','OverlimitsB','Requeues','BackB','BackP']
+netem_keys = ['RootNo','Parent','Q_Depth','P_Delay','SentB','SentP','DroppedP','OverlimitsB','Requeues','BackB','BackP']
 
 #Available interfaces (devices), e.g. eth1, eth0
 #dev_keys = []
@@ -45,7 +45,7 @@ prev_flows = {}
 matches_d2 = []
 
 
-def tcshow (e):
+def tcshow (e, devlist):
     '''
     This function handles a pulling event received from the timer
     It wakes up every 50ms (sampling time),collect all the data of all interfaces
@@ -75,18 +75,35 @@ def tcshow (e):
     netem_dev_keys = []
     
     #parse tc show root result
-    tccmd = "tc -s qdisc show"
+    tccmd = "tc -s qdisc show dev " + devlist 
     result = subprocess.check_output(tccmd,shell=True)
+    print result
     parse_result = re.compile(r'qdisc\s*[a-zA-Z_]+\s+([0-9]+):\sdev\s([a-zA-Z0-9-]+)\sroot\s[a-zA-Z0-9_.:\s]+Sent\s([\d]+)\sbytes\s([\d]+)\spkt\s\(dropped\s([\d]+),\soverlimits\s([\d]+)\srequeues\s([\d]+)\)\s*backlog\s([\d]+)b+\s([\d]+)p')
+    parse_result = re.compile(r'qdisc\s*[a-zA-Z_]+\s+([0-9]+):\sroot\s[a-zA-Z0-9_.:\s]+Sent\s([\d]+)\sbytes\s([\d]+)\spkt\s\(dropped\s([\d]+),\soverlimits\s([\d]+)\srequeues\s([\d]+)\)\s*backlog\s([\d]+)b+\s([\d]+)p')
     matches_d = parse_result.findall(result)
-    entry = [dict(zip(entry_keys,row)) for row in matches_d]
+    #entry = [dict(zip(entry_keys,row)) for row in matches_d]
+    entry = []
+    for row in matches_d:
+	tmp = dict(zip(entry_keys,row))	
+	tmp['Dev'] = devlist
+	entry.append(tmp)
+    print entry
+    #print matches_d
     #parse tc show parent result
     result2 = subprocess.check_output(tccmd,shell=True)
     #print result2
     parse_result2 = re.compile(r'qdisc\snetem\s+([0-9]+):\sdev\s([a-zA-Z0-9-]+)\sparent\s([0-9]+:[0-9]+)\slimit\s([0-9]+)\sdelay\s([0-9.]+)[mu]s[a-zA-Z0-9_.:\s]+Sent\s([\d]+)\sbytes\s([\d]+)\spkt\s\(dropped\s([\d]+),\soverlimits\s([\d]+)\srequeues\s([\d]+)\)\s*backlog\s([\dA-Z]+)b\s([\d]+)p')
+    parse_result2 = re.compile(r'qdisc\snetem\s+([0-9]+):\sparent\s([0-9]+:[0-9]+)\slimit\s([0-9]+)\sdelay\s([0-9.]+)[mu]s[a-zA-Z0-9_.:\s]+Sent\s([\d]+)\sbytes\s([\d]+)\spkt\s\(dropped\s([\d]+),\soverlimits\s([\d]+)\srequeues\s([\d]+)\)\s*backlog\s([\dA-Z]+)b\s([\d]+)p')
     matches_d2 = parse_result2.findall(result2)
 
-    netem_entry = [dict(zip(netem_keys,row)) for row in matches_d2]
+    #netem_entry = [dict(zip(netem_keys,row)) for row in matches_d2]
+    netem_entry = []
+    for row in matches_d2:
+	tmp = dict(zip(netem_keys,row))
+	tmp['Dev'] = devlist
+	netem_entry.append(tmp)
+
+    print netem_entry
     #print matches_d2
     #save everything into a tc_dict{idx:{dev1:{'RootNo':...},dev2:{'RootNo':...}}}
     for item in entry:
@@ -100,20 +117,19 @@ def tcshow (e):
 		if t.endswith('M'):
                   t = t[0:len(t)-1] + "000000"
 		item.update({'BackB':t}) 
-		if netem_item['RootNo']=='10':
-			item.update({'SentB':netem_item['SentB']})
-			item.update({'SentP':netem_item['SentP']})
-			item.update({'BackP':netem_item['BackP']})
-	        	item.update({'RootNo':'10'})
         item.update({'delta_t': delta_t})
         dev_keys.append(item['Dev'])
-    #     print item
-    # print '---------tcdict item-----------'
-    
+    	print dev_keys
     #lock tc_dict and update it
     tclock.acquire()
     tc_dict.update({idx : dict(zip(dev_keys,entry))})
-    # print tc_dict[idx]['s1-eth2']
+    for item in netem_entry:
+	if item['RootNo'] == '10':
+	    tc_dict.update({idx : dict(zip(dev_keys,[item]))})
+	    break
+ 
+    print tc_dict[idx]['s1-eth2']
+    print '--------'
     if len(tc_dict) > MAX_BUF:
 	#remove the out of boundary entry
         del tc_dict[idx-MAX_BUF]
@@ -179,7 +195,6 @@ def detectflows(intf, servIP, portRange, cToS):
     tccmd = "sudo ovs-ofctl dump-flows "+intf
     result = subprocess.check_output(tccmd,shell=True)
     portTrueRange = findPortMinMax(portRange)
-    # print "-----------detect flows---------------"
     for item in result.split('\n'):
         elem = item.split(',')
         #print elem
@@ -187,14 +202,14 @@ def detectflows(intf, servIP, portRange, cToS):
         if len(elem)<=9:
             pass
 
-        elif elem[8]=='udp':
+        elif elem[8]=='tcp':
            #print '---------flows--------'
            #print elem
            if int(elem[6].split('=')[1]) < 1:
                if (cToS):
                     servPort = elem[-1].split(' ')[0].split('=')[1]
-                    # print "this server port and port range are"
-                    # print servPort,portTrueRange
+                    print "this server port and port range are"
+                    print servPort,portTrueRange
                     if IPAddress(elem[-4].split('=')[1]) in IPNetwork(servIP) and int(servPort) in portTrueRange:
                             flow = {'serverIP':elem[-4].split('=')[1], 'serverPort':servPort, 'clientIP':elem[-5].split('=')[1], 'clientPort':elem[-2].split('=')[1], 'durations':elem[1].split('=')[1], 'packets':elem[3].split('=')[1], 'bytes':elem[4].split('=')[1], 'outPort':elem[-1].split(' ')[1].split(':')[1],'lowDelay':True}
                             flows.append(flow)
@@ -205,16 +220,16 @@ def detectflows(intf, servIP, portRange, cToS):
                             #print flow      
                else:
                     servPort = elem[-2].split('=')[1]
-                    # print "this server port and port range are"
-                    # print servPort,portTrueRange
+                    print "this server port and port range are"
+                    print servPort,portTrueRange
                     if IPAddress(elem[-5].split('=')[1]) in IPNetwork(servIP) and int(servPort) in portTrueRange:
                             flow = {'serverIP':elem[-5].split('=')[1], 'serverPort':servPort, 'clientIP':elem[-4].split('=')[1], 'clientPort':elem[-1].split(' ')[0].split('=')[1], 'durations':elem[1].split('=')[1], 'packets':elem[3].split('=')[1], 'bytes':elem[4].split('=')[1], 'outPort':elem[-1].split(' ')[1].split(':')[1],'lowDelay':True}
                             flows.append(flow)
                     else :       
                             flow = {'serverIP':elem[-5].split('=')[1], 'serverPort':servPort, 'clientIP':elem[-4].split('=')[1], 'clientPort':elem[-1].split(' ')[0].split('=')[1], 'durations':elem[1].split('=')[1], 'packets':elem[3].split('=')[1], 'bytes':elem[4].split('=')[1],'outPort':elem[-1].split(' ')[1].split(':')[1], 'lowDelay':False}
                             flows.append(flow)
-    # print flows
-    # print "------------------finished detect flows---------------------"    
+    print flows
+        
     return flows
 
 def extractSwitchID(intf):
@@ -238,7 +253,6 @@ def extractSwitchID(intf):
     return switches
 
 def applyQdiscMgmt(intf, ipblock, portRange, cToS, linkCap):
-    print "------------applyQdiscMgmt------------------"
     global prev_flows
     switches = extractSwitchID(intf)
     for sw in switches.keys():
@@ -255,9 +269,9 @@ def applyQdiscMgmt(intf, ipblock, portRange, cToS, linkCap):
             value['nData']=b
             print value 
             switches[sw][0][key] = value                    
-        #print switches[sw][0] 
-        # print "--------------flowList-------------"         
-        # print flowList
+        #print switches[sw][0]          
+        print flowList
+        
         if sw in prev_flows.keys():
             if prev_flows[sw] == flowList:
                 print "flows did not change since last time"
@@ -274,7 +288,7 @@ def applyQdiscMgmt(intf, ipblock, portRange, cToS, linkCap):
     result = tcQoS(switches[sw][0])
     print "---------------tcQoS :%s------------" %sw
     print result
-    print "------------------------------------"
+    print "--------------------------------"
 
 def tcQoS (intflist):
     result=dict()
@@ -306,8 +320,9 @@ class TControl(threading.Thread):
     def run(self):
         try:
             while self.keeprunning > 0:
-                tcshow(self.event)
-                intflist = 's1-eth2'
+                intflist = "s1-eth2,s2-eth1","s3-eth2"
+                tcshow(self.event, intflist)
+		print 'haha'
                 #applyQdiscMgmt(intflist,'10.0.0.3/32','5001-5002','True','0.15')
                 self.keeprunning-=1
         except KeyboardInterrupt:
@@ -335,7 +350,7 @@ class QoSTimer(threading.Thread):
             while self.keeprunning > 0:
                 intflist = 's1-eth2'
                 #linkcap = 0.5
-                applyQdiscMgmt(intflist,'10.0.0.2/32','8000-8100',False,'5')
+                applyQdiscMgmt(intflist,'10.0.0.2/32','8000','False','5')
                 #self.keeprunning-=1
         except KeyboardInterrupt:
             print "stoptimer"
@@ -346,9 +361,41 @@ class QoSTimer(threading.Thread):
         self.keeprunning = self.initial
         sleep = False
 
+# class Timer1(threading.Thread):
+#         def __init__(self,e,seconds,counter):
+#                 super(Timer1, self).__init__()
+#                 self.runTime = seconds
+#                 self.keeprunning = counter
+#                 self.initial = counter
+#                 self.event = e
+#         def run(self):
+#                 try:
+#                         counter = 0
+#                         while self.keeprunning > 0:
+#                                 self.event.set()
+#                                 time.sleep(self.runTime)
+#                                 if counter == 20:
+#                                         #print self.keeprunning/20 =200/20=10
+#                                         counter = 0
+#                                 counter +=1
+#                                 self.keeprunning-=1
+
+
+#                         print "Going to sleep"
+#                         global monitor_run
+#                         monitor_run = False
+#                 except KeyboardInterrupt:
+#                         print "stoptimer"
+#                         self.stop()
+#         def stop(self):
+#                 self.keeprunning = 0
+#         def reset(self):
+#                 self.keeprunning = self.initial
+#                 sleep = False
+
 if __name__ == '__main__':
     e = threading.Event()
-    counter = 200
+    counter = 20
     t1 = TControl(e,counter)
     t2 = Timer1(e,0.05,counter)
     t1.daemon = True

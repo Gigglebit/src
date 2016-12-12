@@ -13,5 +13,5 @@ function change_qdisc {
 
 }
 
-change_qdisc s0-eth1
-change_qdisc s0-eth2
+change_qdisc s1-eth2
+# change_qdisc s2-eth1
