@@ -6,7 +6,7 @@ This file stores all global functions and variables
 class myGlobal(object):
 	#index of stats
 	idx = 0
-	#thread lock for safe write and read
+	qoslock = threading.Lock()#thread lock for safe write and read
 	tclock = threading.Lock()
 
 def round_sigfigs(num, sig_figs):

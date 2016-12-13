@@ -43,8 +43,8 @@ curr_t = 0
 delta_t = 0
 prev_flows = {}
 matches_d2 = []
-
-
+last_min_rate = 4 #initialise the min rate
+q = Queue.Queue()
 def tcshow (e):
     '''
     This function handles a pulling event received from the timer
@@ -64,6 +64,8 @@ def tcshow (e):
     global prev_t
     global delta_t
     global matches_d2
+    global q
+    global last_min_rate
     entry = []
     curr_t =time.time()
     delta_t = curr_t-prev_t
@@ -89,22 +91,31 @@ def tcshow (e):
     netem_entry = [dict(zip(netem_keys,row)) for row in matches_d2]
     #print matches_d2
     #save everything into a tc_dict{idx:{dev1:{'RootNo':...},dev2:{'RootNo':...}}}
+    visited = {}
     for item in entry:
-    	#print item
+        #print item
         for netem_item in netem_entry:
-	    if netem_item['Dev']==item['Dev']:
-		item.update({'P_Delay':netem_item['P_Delay']})
+            if netem_item['Dev']==item['Dev'] and item['Dev'] not in visited:
+                item.update({'P_Delay':netem_item['P_Delay']})
                 t = netem_item['BackB']
                 if t.endswith('K'):
-		  t = t[0:len(t)-1] + "000"
-		if t.endswith('M'):
-                  t = t[0:len(t)-1] + "000000"
-		item.update({'BackB':t}) 
-		if netem_item['RootNo']=='10':
-			item.update({'SentB':netem_item['SentB']})
-			item.update({'SentP':netem_item['SentP']})
-			item.update({'BackP':netem_item['BackP']})
-	        	item.update({'RootNo':'10'})
+                    t = t[0:len(t)-1] + "000"
+                if t.endswith('M'):
+                    t = t[0:len(t)-1] + "000000"
+                item.update({'BackB':t}) 
+                if netem_item['RootNo']=='10':
+                        item.update({'SentB':netem_item['SentB']})
+                        item.update({'SentP':netem_item['SentP']})
+                        item.update({'BackP':netem_item['BackP']})
+                        item.update({'RootNo':'10'})
+                        if q.empty():
+                            item.update({'MinRate':last_min_rate})
+                        else:
+                            while not q.empty():
+                                last_min_rate = q.get()
+                            item.update({'MinRate':last_min_rate})
+                        visited[item['Dev']]=True
+
         item.update({'delta_t': delta_t})
         dev_keys.append(item['Dev'])
     #     print item
@@ -129,8 +140,9 @@ def flowsMetaData(flows, outPort):
     nLowDelay = 0.0
     nNonLow = 0.0
     for flow in flows:
-        if (outPort == flow['outPort']):
-            if(flow['lowDelay']): 
+        # if (outPort == flow['outPort']):
+            # print flow
+            if(flow[4]): 
                 nLowDelay = nLowDelay + 1
             else:
                 nNonLow = nNonLow + 1
@@ -143,7 +155,7 @@ def flowsMetaData(flows, outPort):
 
 def changeQdisc(linkCap, ratio, intfs):
     rate1 = 0.02
-    print "haha ratio "+str(ratio)
+    print "The ratio of no. of low delay/no. of total is: "+str(ratio)
     if ratio < 0.2 :
         rate1 = linkCap*0.2
     elif ratio > 0.9 :
@@ -152,9 +164,12 @@ def changeQdisc(linkCap, ratio, intfs):
         rate1 = linkCap*ratio
     rate2 = linkCap - rate1
     #print ratio
+
     print ("now the min rate for low delay queue is %s", rate1)
     print ("now the min rate for data queue is %s", rate2)
     cmd = 'bash tc_change_diff2.sh %s %s %s ' % (linkCap,rate1,rate2)
+    global q
+    q.put(rate1)
     #print intfs
     for intf in intfs.keys():
         cmd = cmd + intf +" "
@@ -187,7 +202,7 @@ def detectflows(intf, servIP, portRange, cToS):
         if len(elem)<=9:
             pass
 
-        elif elem[8]=='udp':
+        elif elem[8]=='udp' or 'tcp':
            #print '---------flows--------'
            #print elem
            if int(elem[6].split('=')[1]) < 1:
@@ -207,6 +222,11 @@ def detectflows(intf, servIP, portRange, cToS):
                     servPort = elem[-2].split('=')[1]
                     # print "this server port and port range are"
                     # print servPort,portTrueRange
+
+                    if (elem[-5].split('=')[0]=='dl_src'):
+                        # print elem
+                        continue
+
                     if IPAddress(elem[-5].split('=')[1]) in IPNetwork(servIP) and int(servPort) in portTrueRange:
                             flow = {'serverIP':elem[-5].split('=')[1], 'serverPort':servPort, 'clientIP':elem[-4].split('=')[1], 'clientPort':elem[-1].split(' ')[0].split('=')[1], 'durations':elem[1].split('=')[1], 'packets':elem[3].split('=')[1], 'bytes':elem[4].split('=')[1], 'outPort':elem[-1].split(' ')[1].split(':')[1],'lowDelay':True}
                             flows.append(flow)
@@ -239,42 +259,57 @@ def extractSwitchID(intf):
 
 def applyQdiscMgmt(intf, ipblock, portRange, cToS, linkCap):
     print "------------applyQdiscMgmt------------------"
+    qoslock = myGlobal.qoslock
     global prev_flows
     switches = extractSwitchID(intf)
     for sw in switches.keys():
         flowList = []
-        flows = detectflows(sw, ipblock, portRange, cToS)
+        #detecting flows
+        flows = detectflows(sw, ipblock, portRange, cToS) #
+        #filter out flowLists
+        qoslock.acquire()
         for flow in flows:
             if flow['outPort'] =='2':
-                flowList.append([flow['serverIP'],flow['serverPort'],flow['clientIP'],flow['clientPort'],flow['lowDelay'],flow['outPort']])
+                if IPAddress(flow['serverIP']) not in IPNetwork(ipblock):
+                    flowList.append([flow['serverIP'],flow['serverPort'],flow['clientIP'],flow['clientPort'],flow['lowDelay'],flow['outPort']])
+                else:
+                    # print "flow"
+                    # print flow
+                    if (flow['lowDelay']):
+                        flowList.append([flow['serverIP'],flow['serverPort'],flow['clientIP'],flow['clientPort'],flow['lowDelay'],flow['outPort']])
+        #key value pair                
         for key, value in switches[sw][0].items():#for each port of a switch
-            ratio, a,b = flowsMetaData(flows,value['port'])
-            print value['port']+':'
+            ratio, a,b = flowsMetaData(flowList ,value['port'])
+            # print value['port']+':'
+            print '--------the ratio, number of videos, number of data is shown below:----------'
             print ratio, a, b
             value['nVideo']=a
             value['nData']=b
             print value 
             switches[sw][0][key] = value                    
         #print switches[sw][0] 
-        # print "--------------flowList-------------"         
-        # print flowList
+        print "--------------flowList-------------"         
+        print flowList
+
+        # as long as flowList changed
         if sw in prev_flows.keys():
             if prev_flows[sw] == flowList:
                 print "flows did not change since last time"
             else:
-                if flows:
+                # if flows:
                     #print '-----flows-----'
                     #print flows
                     #print sw
                     #print switches[sw] 
-                    ratio,nLow,nData = flowsMetaData(flows, '2')
-                    changeQdisc(float(linkCap), ratio, switches[sw][0])
-                    print "flows have been changed"
+                ratio,nLow,nData = flowsMetaData(flowList, '2')
+                # changeQdisc(float(linkCap), ratio, switches[sw][0])
+                print "flows have been changed"
         prev_flows[sw] = flowList   
-    result = tcQoS(switches[sw][0])
-    print "---------------tcQoS :%s------------" %sw
-    print result
-    print "------------------------------------"
+        qoslock.release()
+    # result = tcQoS(switches[sw][0])
+    # print "---------------tcQoS :%s------------" %sw
+    # print result
+    # print "------------------------------------"
 
 def tcQoS (intflist):
     result=dict()

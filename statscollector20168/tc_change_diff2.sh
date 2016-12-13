@@ -1,15 +1,19 @@
 #!/bin/bash
 
 rate=$1Mbit
-rate2=$2Mbit
-rate3=$3Mbit
+rate1=$2Mbit
+rate2=$3Mbit
 
 function change_qdisc {
     dev=$1
 
-    tc class change dev $dev classid 1:10 parent 1:1 htb rate $rate2 ceil $rate
-    tc class change dev $dev classid 1:11 parent 1:1 htb rate $rate3 ceil $rate
+    tc class change dev $dev classid 1:10 parent 1:1 htb rate $rate1 ceil $rate1
+    tc class change dev $dev classid 1:11 parent 1:1 htb rate $rate2 ceil $rate2
     echo classes changed
+    echo $dev
+    echo $rate
+    echo $rate1
+    echo $rate2
 
 }
 

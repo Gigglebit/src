@@ -46,7 +46,11 @@ def cal_bw_delay(entries_range,idx,path,link_cap,tc_result):
 			for j in path[0:2]: #ignore the last entry
 				l.append(int(tc_result[i][j]['BackB']))
 				l.append(int(tc_result[i][j]['SentB']) - int(tc_result[i-1][j]['SentB']))
-				l.append(float(link_cap[link_ct]))
+				if 'MinRate' in tc_result[i][j]:
+					l.append(rnd(float(tc_result[i][j]['MinRate']),3))
+				else:
+					l.append(float(link_cap[link_ct]))
+
 				# for key, value in tc_result[i].iteritems() :
     # 					print key, value
 				if j == path[0] and 'P_Delay' in tc_result[i][path[2]]:
@@ -173,8 +177,8 @@ def start_monitor(e):
 		t3.start()
 		monitor_run = True
 	else:
-		#print "----reset threads-----"
-	 	#print threads
+		print "----reset threads-----"
+	 	print threads
 		threads[0].reset()
 		threads[1].reset()
 		threads[2].reset()
