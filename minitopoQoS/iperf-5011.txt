@@ -1,0 +1,11 @@
+------------------------------------------------------------
+Client connecting to 10.0.0.3, TCP port 5011
+TCP window size: 32.0 MByte (WARNING: requested 16.0 MByte)
+------------------------------------------------------------
+[  3] local 10.0.0.254 port 58446 connected with 10.0.0.3 port 5011
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0- 1.0 sec   242 MBytes  2.03 Gbits/sec
+[  3]  1.0- 2.0 sec   195 MBytes  1.64 Gbits/sec
+[  3]  2.0- 3.0 sec   187 MBytes  1.57 Gbits/sec
+[  3]  3.0- 4.0 sec   182 MBytes  1.53 Gbits/sec
+[  3]  0.0- 4.1 sec   807 MBytes  1.66 Gbits/sec

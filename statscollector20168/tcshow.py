@@ -302,7 +302,7 @@ def applyQdiscMgmt(intf, ipblock, portRange, cToS, linkCap):
                     #print sw
                     #print switches[sw] 
                 ratio,nLow,nData = flowsMetaData(flowList, '2')
-                # changeQdisc(float(linkCap), ratio, switches[sw][0])
+                changeQdisc(float(linkCap), ratio, switches[sw][0])
                 print "flows have been changed"
         prev_flows[sw] = flowList   
         qoslock.release()
@@ -370,7 +370,7 @@ class QoSTimer(threading.Thread):
             while self.keeprunning > 0:
                 intflist = 's1-eth2'
                 #linkcap = 0.5
-                applyQdiscMgmt(intflist,'10.0.0.2/32','8000-8100',False,'5')
+                applyQdiscMgmt(intflist,'10.0.0.2/32','8000-65535',False,'10')
                 #self.keeprunning-=1
         except KeyboardInterrupt:
             print "stoptimer"

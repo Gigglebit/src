@@ -1,0 +1,9 @@
+------------------------------------------------------------
+Client connecting to 10.0.0.3, TCP port 5001
+TCP window size: 32.0 MByte (WARNING: requested 16.0 MByte)
+------------------------------------------------------------
+[  3] local 10.0.0.254 port 35958 connected with 10.0.0.3 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0- 1.0 sec  1.88 GBytes  16.1 Gbits/sec
+[  3]  1.0- 2.0 sec  1.44 GBytes  12.4 Gbits/sec
+[  3]  0.0- 2.1 sec  3.37 GBytes  14.0 Gbits/sec

@@ -32,6 +32,7 @@ parser.add_argument('--exp', '-e',
 
 parser.add_argument('--btnSpeed', '-b',
                     dest="btn",
+                    type=float,
                     action="store",
                     help="Bottleneck link speed",
                     required=True)
@@ -80,9 +81,9 @@ class SimpleTopo(Topo):
        s3 = self.addSwitch('s3')
        s4 = self.addSwitch('s4')
        #s5 = self.addSwitch('s5')
-       h1 = self.addHost('h1')
-       h2 = self.addHost('h2')
-       h3 = self.addHost('h3')
+       h1 = self.addHost('h1', cpu =None)
+       h2 = self.addHost('h2', cpu =None)
+       h3 = self.addHost('h3', cpu =None)
        # self.addLink( s1, h1, bw=int(args.hs_bw))
        # self.addLink( s2, h2, bw=int(args.hs_bw))
 
@@ -104,7 +105,7 @@ class SimpleTopo(Topo):
        #self.addLink( s1, s5, bw=int(args.hs_bw))
        #self.addLink( s2, s5, bw=int(args.hs_bw))
        
-topos = { 'mytopo': ( lambda: SimpleTopo() ) }
+# topos = { 'mytopo': ( lambda: SimpleTopo() ) }
 
 def ping_latency(net):
     "(Incomplete) verify link latency"
@@ -129,6 +130,7 @@ def Test():
                                controller=RemoteController ,
                                ip='127.0.0.1',
                                port=6633)
+   net.start()
    s1 = net.getNodeByName('s1')
    s2 = net.getNodeByName('s2')
    if args.intf1 is not None:
@@ -152,12 +154,21 @@ def Test():
    #h1.cmd("bash tc_cmd_diff.sh h1-eth0")
    #h1.cmd("tc -s show dev h1-eth0")
    print "Differentiate Traffic Between iperf and wget"
-   os.system("bash tc_diff.sh")
+   os.system("bash tc_diff.sh %s %s %s" % (args.btn,args.btn*0.5,args.btn*0.5))
    #h1.cmd('cd ./http/; python2.7 ./webserver.py &')
    #h1.cmd('cd ../')
-   h2.cmd('iperf -s -w 16m -p 5001 -i 1 > iperf-recv.txt &')   
+   iperf_cmd_raw = 'iperf -s -w 16m -p %s -i 1 > iperf-recv-%s.txt &'
+   for i in xrange(16):
+       iperf_cmd=iperf_cmd_raw %(5001+i,5001+i)
+       h2.cmd(iperf_cmd)
+   iperf_cmd_raw = 'iperf -s -p %s -u -i 1 > iperf-recv-%s.txt &'
+   for i in xrange(4):
+       iperf_cmd=iperf_cmd_raw %(5101+i,5101+i)
+       h2.cmd(iperf_cmd)
+
+   #h2.cmd('iperf -s -w 16m -p 5001 -i 1 > iperf-recv.txt &')
    #h2.cmd('iperf -s -p 5001 -i 1 > iperf-recv_TCP.txt &')
-   h2.cmd('iperf -s -p 5003 -u -i 1 > iperf-recv_UDP.txt &')
+   #h2.cmd('iperf -s -p 5003 -u -i 1 > iperf-recv_UDP.txt &')
    #h2.cmd('iperf -s -p %s -i 1 > iperf_server_TCP.txt &' % 5001)
 #               (CUSTOM_IPERF_PATH, 5001, args.dir))
    #monitoring the network

@@ -1,9 +1,9 @@
 #!/bin/bash
 
-rate=5Mbit
-rate2=4.0Mbit
-rate3=1.0Mbit
-rateb=5Mbit
+rate=$1Mbit
+rate2=$2Mbit
+rate3=$3Mbit
+# rateb=5Mbit
 
 function add_qdisc {
     dev=$1
