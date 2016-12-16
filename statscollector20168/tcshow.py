@@ -44,7 +44,8 @@ delta_t = 0
 prev_flows = {}
 matches_d2 = []
 last_min_rate = 4 #initialise the min rate
-q = Queue.Queue()
+q = Queue.Queue() # min-rate pass from qos to tcshow
+qab = Queue.Queue() #number of a flow and b flow
 def tcshow (e):
     '''
     This function handles a pulling event received from the timer
@@ -65,6 +66,7 @@ def tcshow (e):
     global delta_t
     global matches_d2
     global q
+    global qab
     global last_min_rate
     entry = []
     curr_t =time.time()
@@ -92,6 +94,9 @@ def tcshow (e):
     #print matches_d2
     #save everything into a tc_dict{idx:{dev1:{'RootNo':...},dev2:{'RootNo':...}}}
     visited = {}
+    SentB_10 = 0
+    BackP_10 = 0
+
     for item in entry:
         #print item
         for netem_item in netem_entry:
@@ -104,9 +109,11 @@ def tcshow (e):
                     t = t[0:len(t)-1] + "000000"
                 item.update({'BackB':t}) 
                 if netem_item['RootNo']=='10':
-                        item.update({'SentB':netem_item['SentB']})
+                        SentB_10 = netem_item['SentB']
+                        BackP_10 = netem_item['BackP']
+                        item.update({'SentB':SentB_10})
                         item.update({'SentP':netem_item['SentP']})
-                        item.update({'BackP':netem_item['BackP']})
+                        item.update({'BackP':BackP_10})
                         item.update({'RootNo':'10'})
                         if q.empty():
                             item.update({'MinRate':last_min_rate})
@@ -115,6 +122,17 @@ def tcshow (e):
                                 last_min_rate = q.get()
                             item.update({'MinRate':last_min_rate})
                         visited[item['Dev']]=True
+            # if netem_item['RootNo'] == '11':
+
+            #     while not q.empty():
+            #         nflow = qab.get()
+            #         print '----------------nflownflownflow!!!!!@!#!#$@$$349689387698970--------------------'
+
+            #         if 'nVideo' in nflow:
+            #             print "it is here!!!!!!!!!!!!!!!!!!!!&*(&(*&(*&(*&(*&*&%!#%^@%#^@%!^*$^@%"
+            #             with open(netem_item['Dev']+'.txt', 'a') as the_file:
+            #                 print "it is here!!!!!!!!!!!!!!!!!!!!&*(&(*&(*&(*&(*&*&%!#%^@%#^@%!^*$^@%"
+            #                 the_file.write("%s, %s, %s, %s, %s, %s, %s, %s\n" % (curr_t, delta_t, SentB_10, netem_item['SentB'], BackP_10, netem_item['BackP'],nflow['nVideo'],nflow['nData']))
 
         item.update({'delta_t': delta_t})
         dev_keys.append(item['Dev'])
@@ -256,11 +274,15 @@ def extractSwitchID(intf):
                 switches.setdefault(sw,[]).append(intfs_dict)
 
     return switches
-
+SchmittTrigger={}
+qosTrigger = 'CLEAR'
 def applyQdiscMgmt(intf, ipblock, portRange, cToS, linkCap):
     print "------------applyQdiscMgmt------------------"
     qoslock = myGlobal.qoslock
     global prev_flows
+    global SchmittTrigger
+    global qosTrigger
+    global qab
     switches = extractSwitchID(intf)
     for sw in switches.keys():
         flowList = []
@@ -281,11 +303,13 @@ def applyQdiscMgmt(intf, ipblock, portRange, cToS, linkCap):
         for key, value in switches[sw][0].items():#for each port of a switch
             ratio, a,b = flowsMetaData(flowList ,value['port'])
             # print value['port']+':'
+
             print '--------the ratio, number of videos, number of data is shown below:----------'
             print ratio, a, b
             value['nVideo']=a
             value['nData']=b
             print value 
+            qab.put(value)
             switches[sw][0][key] = value                    
         #print switches[sw][0] 
         print "--------------flowList-------------"         
@@ -293,17 +317,27 @@ def applyQdiscMgmt(intf, ipblock, portRange, cToS, linkCap):
 
         # as long as flowList changed
         if sw in prev_flows.keys():
+            flowListString = ''.join(str(r) for v in flowList for r in v)
             if prev_flows[sw] == flowList:
                 print "flows did not change since last time"
             else:
-                # if flows:
-                    #print '-----flows-----'
-                    #print flows
-                    #print sw
-                    #print switches[sw] 
+                qosTrigger= 'INIT'
+
+            if qosTrigger=='INIT':
+                SchmittTrigger[flowListString] = 0
+                qosTrigger='WAIT'
+            elif qosTrigger == 'WAIT':
+                SchmittTrigger[flowListString] += 1
+                if SchmittTrigger[flowListString] >= 4:
+                    qosTrigger='CHANGE'
+            elif qosTrigger == 'CHANGE':
                 ratio,nLow,nData = flowsMetaData(flowList, '2')
                 changeQdisc(float(linkCap), ratio, switches[sw][0])
                 print "flows have been changed"
+                SchmittTrigger = {}
+                qosTrigger ='CLEAR'
+            else:
+                pass
         prev_flows[sw] = flowList   
         qoslock.release()
     # result = tcQoS(switches[sw][0])
@@ -311,16 +345,16 @@ def applyQdiscMgmt(intf, ipblock, portRange, cToS, linkCap):
     # print result
     # print "------------------------------------"
 
-def tcQoS (intflist):
-    result=dict()
-    global matches_d2
-    global curr_t
-    global delta_t
-    for i in range(0,len(matches_d2),2):
-        for intf, values in intflist.items():
-            if intf==matches_d2[i][1]:
-                result[intf] = "%s, %s, %s, %s, %s, %s, %s, %s\n" % (curr_t, delta_t, matches_d2[i][5],matches_d2[i+1][5],matches_d2[i][-1],matches_d2[i+1][-1],values['nVideo'],values['nData'])
-    return result
+# def tcQoS (intflist):
+#     result=dict()
+#     global matches_d2
+#     global curr_t
+#     global delta_t
+#     for i in range(0,len(matches_d2),2):
+#         for intf, values in intflist.items():
+#             if intf==matches_d2[i][1]:
+#                 result[intf] = "%s, %s, %s, %s, %s, %s, %s, %s\n" % (curr_t, delta_t, matches_d2[i][5],matches_d2[i+1][5],matches_d2[i][-1],matches_d2[i+1][-1],values['nVideo'],values['nData'])
+#     return result
 
 def qosmonitor(e):
     counter = 200

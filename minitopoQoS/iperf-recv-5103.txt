@@ -1,5 +1,1 @@
-------------------------------------------------------------
-Server listening on UDP port 5103
-Receiving 1470 byte datagrams
-UDP buffer size:  208 KByte (default)
-------------------------------------------------------------
+iperf3: parameter error - some option you are trying to set is client only

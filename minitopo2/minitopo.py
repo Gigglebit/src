@@ -123,14 +123,21 @@ def Test():
 #   print "DHCPD = "+ out
    #h1.cmd("bash tc_cmd_diff.sh h1-eth0")
    #h1.cmd("tc -s show dev h1-eth0")
-   h2.cmd('iperf -s -p 5001 -i 1 > iperf-recv_TCP.txt &')
-   h2.cmd('iperf -s -p 5003 -u -i 1 > iperf-recv_UDP.txt &')
+   # h2.cmd('iperf -s -p 5001 -i 1 > iperf-recv_TCP.txt &')
+   # h2.cmd('iperf -s -p 5003 -u -i 1 > iperf-recv_UDP.txt &')
    #h2.cmd('iperf -s -p %s -i 1 > iperf_server_TCP.txt &' % 5001)
 #               (CUSTOM_IPERF_PATH, 5001, args.dir))
    #monitoring the network
   #monitor = Process(target=monitor_qlen,
                      #args=("%s"%args.iface,float(args.sampleR),int(args.nQ), "%s_%s"% (args.exp,args.out)))   
-       
+   iperf_cmd_raw = 'iperf3 -s -p %s -i 1 > iperf-recv-%s.txt &'
+   for i in xrange(16):
+       iperf_cmd=iperf_cmd_raw %(5001+i,5001+i)
+       h2.cmd(iperf_cmd)
+   iperf_cmd_raw = 'iperf3 -s -p %s -u -i 1 > iperf-recv-%s.txt &'
+   for i in xrange(4):
+       iperf_cmd=iperf_cmd_raw %(5101+i,5101+i)
+       h2.cmd(iperf_cmd)       
 
    for host in net.hosts:
        #host.cmd('tc qdisc del dev %s-eth0 root'%host)              
