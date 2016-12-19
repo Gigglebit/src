@@ -46,6 +46,8 @@ matches_d2 = []
 last_min_rate = 4 #initialise the min rate
 q = Queue.Queue() # min-rate pass from qos to tcshow
 qab = Queue.Queue() #number of a flow and b flow
+summaryq = Queue.Queue()
+
 def tcshow (e):
     '''
     This function handles a pulling event received from the timer
@@ -59,7 +61,8 @@ def tcshow (e):
     # grab the locker and idx
     tclock = myGlobal.tclock
     idx = myGlobal.idx
-    
+    summarylock = myGlobal.summarylock
+    qoslock = myGlobal.qoslock
     # calculate delta_t
     global curr_t
     global prev_t
@@ -97,8 +100,14 @@ def tcshow (e):
     SentB_10 = 0
     BackP_10 = 0
 
+    nflow = {}
+    qoslock.acquire()
+    while not qab.empty():
+        nflow = qab.get()
+    qoslock.release()   
     for item in entry:
         #print item
+        # qoslock.acquire()
         for netem_item in netem_entry:
             if netem_item['Dev']==item['Dev'] and item['Dev'] not in visited:
                 item.update({'P_Delay':netem_item['P_Delay']})
@@ -115,15 +124,32 @@ def tcshow (e):
                         item.update({'SentP':netem_item['SentP']})
                         item.update({'BackP':BackP_10})
                         item.update({'RootNo':'10'})
+                        qoslock.acquire()
                         if q.empty():
                             item.update({'MinRate':last_min_rate})
                         else:
                             while not q.empty():
                                 last_min_rate = q.get()
                             item.update({'MinRate':last_min_rate})
+                        qoslock.release() 
                         visited[item['Dev']]=True
-            # if netem_item['RootNo'] == '11':
-
+            if netem_item['Dev']==item['Dev'] and netem_item['Dev']=='s1-eth2' and netem_item['RootNo'] == '11':
+                summary = []
+                summary.append(curr_t)
+                summary.append(delta_t)
+                summary.append(SentB_10)
+                summary.append(netem_item['SentB'])
+                summary.append(BackP_10)
+                summary.append(netem_item['BackP'])
+                if 'nVideo' in nflow:
+                    summary.append(nflow['nVideo'])
+                    summary.append(nflow['nData'])     
+                summarylock.acquire()
+                summaryq.put(summary)
+                print '------------------summary!!!!------------------'
+                print summary
+                summarylock.release()
+            
             #     while not q.empty():
             #         nflow = qab.get()
             #         print '----------------nflownflownflow!!!!!@!#!#$@$$349689387698970--------------------'

@@ -4,10 +4,11 @@ import math
 This file stores all global functions and variables 
 '''
 class myGlobal(object):
-	#index of stats
-	idx = 0
-	qoslock = threading.Lock()#thread lock for safe write and read
-	tclock = threading.Lock()
+    #index of stats
+    idx = 0
+    qoslock = threading.Lock()#thread lock for safe write and read
+    tclock = threading.Lock()
+    summarylock = threading.Lock()
 
 def round_sigfigs(num, sig_figs):
     """Round to specified number of sigfigs.

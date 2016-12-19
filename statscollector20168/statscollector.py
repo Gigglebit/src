@@ -38,6 +38,12 @@ def get_path_stats(start_ip, end_ip,earliest_idx,num_entries):
 def get_qos():
    qos_stats = []
    # start_QoS()
+   global summaryq
+   summarylock = myGlobal.summarylock
+   summarylock.acquire()
+   while not summaryq.empty():
+      qos_stats.append(summaryq.get())
+   summarylock.release()
    result = dumps(qos_stats)
    return result 
 
