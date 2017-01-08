@@ -134,7 +134,7 @@ def tcshow (e):
                         qoslock.release() 
                         visited[item['Dev']]=True
             if netem_item['Dev']==item['Dev'] and netem_item['Dev']=='s1-eth2' and netem_item['RootNo'] == '11':
-                summary = []
+                summary = [] #curr_t, delta_t, sentB(video), sentB(non-video), backloggedPackets(video), backloggedPackets(non-video),num of video, num of non-video flows
                 summary.append(curr_t)
                 summary.append(delta_t)
                 summary.append(SentB_10)
@@ -430,7 +430,7 @@ class QoSTimer(threading.Thread):
             while self.keeprunning > 0:
                 intflist = 's1-eth2'
                 #linkcap = 0.5
-                applyQdiscMgmt(intflist,'10.0.0.2/32','8000-65535',False,'10')
+                applyQdiscMgmt(intflist,'10.0.0.2/32','8000-8100',False,'10')
                 #self.keeprunning-=1
         except KeyboardInterrupt:
             print "stoptimer"

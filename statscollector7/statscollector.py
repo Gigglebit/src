@@ -33,10 +33,10 @@ def get_path_stats(start_ip, end_ip,earliest_idx,num_entries):
 
 def find_link_cap(start_ip,end_ip):
    if start_ip == "10.0.0.2":
-      retVal = [5,10]#[5Mbps,10Mbps]
+      retVal = [10,15]#[5Mbps,10Mbps]
       return retVal
    if end_ip == "10.0.0.2":
-      retVal = [5,10]
+      retVal = [10,15]
       return retVal   
 def find_path(start_ip,end_ip):
    if start_ip == "10.0.0.2":
