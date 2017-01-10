@@ -1,4 +1,27 @@
 -----------------------------------------------------------
 Server listening on 5007
 -----------------------------------------------------------
+Accepted connection from 10.0.0.137, port 49335
+[  5] local 10.0.0.3 port 5007 connected to 10.0.0.137 port 49349
+[ ID] Interval           Transfer     Bandwidth
+[  5]   0.00-1.00   sec  42.4 KBytes   347 Kbits/sec                  
+[  5]   1.00-2.00   sec  55.1 KBytes   452 Kbits/sec                  
+[  5]   2.00-3.00   sec  52.3 KBytes   428 Kbits/sec                  
+[  5]   3.00-4.00   sec  56.6 KBytes   463 Kbits/sec                  
+[  5]   4.00-5.00   sec  56.6 KBytes   463 Kbits/sec                  
+[  5]   5.00-6.00   sec  8.48 KBytes  69.5 Kbits/sec                  
+[  5]   6.00-7.00   sec  80.6 KBytes   660 Kbits/sec                  
+[  5]   7.00-8.00   sec  0.00 Bytes  0.00 bits/sec                  
+[  5]   8.00-9.00   sec  97.6 KBytes   799 Kbits/sec                  
+[  5]   9.00-10.00  sec  0.00 Bytes  0.00 bits/sec                  
+[  5]  10.00-11.00  sec  17.0 KBytes   139 Kbits/sec                  
+[  5]  11.00-12.00  sec   103 KBytes   845 Kbits/sec                  
+[  5]  12.00-12.96  sec  0.00 Bytes  0.00 bits/sec                  
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bandwidth
+[  5]   0.00-12.96  sec  0.00 Bytes  0.00 bits/sec                  sender
+[  5]   0.00-12.96  sec   570 KBytes   360 Kbits/sec                  receiver
+-----------------------------------------------------------
+Server listening on 5007
+-----------------------------------------------------------
 iperf3: interrupt - the server has terminated

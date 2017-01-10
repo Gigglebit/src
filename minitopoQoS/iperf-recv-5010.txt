@@ -1,4 +1,27 @@
 -----------------------------------------------------------
 Server listening on 5010
 -----------------------------------------------------------
+Accepted connection from 10.0.0.137, port 56792
+[  5] local 10.0.0.3 port 5010 connected to 10.0.0.137 port 56807
+[ ID] Interval           Transfer     Bandwidth
+[  5]   0.00-1.00   sec  42.4 KBytes   347 Kbits/sec                  
+[  5]   1.00-2.00   sec  53.7 KBytes   440 Kbits/sec                  
+[  5]   2.00-3.00   sec  56.6 KBytes   463 Kbits/sec                  
+[  5]   3.00-4.00   sec  59.4 KBytes   487 Kbits/sec                  
+[  5]   4.00-5.00   sec  2.83 KBytes  23.2 Kbits/sec                  
+[  5]   5.00-6.00   sec  60.8 KBytes   498 Kbits/sec                  
+[  5]   6.00-7.00   sec  4.24 KBytes  34.7 Kbits/sec                  
+[  5]   7.00-8.00   sec  76.4 KBytes   626 Kbits/sec                  
+[  5]   8.00-9.00   sec  5.66 KBytes  46.3 Kbits/sec                  
+[  5]   9.00-10.00  sec  93.3 KBytes   765 Kbits/sec                  
+[  5]  10.00-11.00  sec  2.83 KBytes  23.2 Kbits/sec                  
+[  5]  11.00-12.00  sec  25.5 KBytes   209 Kbits/sec                  
+[  5]  12.00-12.93  sec  94.7 KBytes   837 Kbits/sec                  
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bandwidth
+[  5]   0.00-12.93  sec  0.00 Bytes  0.00 bits/sec                  sender
+[  5]   0.00-12.93  sec   578 KBytes   366 Kbits/sec                  receiver
+-----------------------------------------------------------
+Server listening on 5010
+-----------------------------------------------------------
 iperf3: interrupt - the server has terminated

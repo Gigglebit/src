@@ -154,7 +154,7 @@ def Test():
    #h1.cmd("bash tc_cmd_diff.sh h1-eth0")
    #h1.cmd("tc -s show dev h1-eth0")
    print "Differentiate Traffic Between iperf and wget"
-   os.system("bash tc_diff.sh %s %s %s" % (args.btn,args.btn*0.5,args.btn*0.001))
+   os.system("bash tc_diff.sh %s %s %s" % (args.btn,args.btn*0.001,args.btn*0.001))
    #os.system("bash tc_diff_twoqmax.sh %s %s %s" % (args.btn,args.btn*0.001,args.btn*0.001))
    #h1.cmd('cd ./http/; python2.7 ./webserver.py &')
    #h1.cmd('cd ../')

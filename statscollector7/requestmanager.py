@@ -38,7 +38,7 @@ def cal_bw_delay(entries_range,idx,path,link_cap,tc_result):
 		l=[]
 		#link counter which indicates the current link index in link_cap
 		link_ct = 0
-		if (i-1) in tc_result:
+		if (i-1) in tc_result and i in tc_result:
 			l.append(i)
 			j = path[0]
 			l.append(rnd(float(tc_result[i][j]['delta_t']),3))

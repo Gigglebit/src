@@ -202,16 +202,17 @@ def changeQdisc(linkCap, ratio, intfs):
     print "The ratio of no. of low delay/no. of total is: "+str(ratio)
     if ratio < 0.2 :
         rate1 = linkCap*0.2
-    elif ratio > 0.9 :
-        rate1 = linkCap*0.9
+    elif ratio > 0.8 :
+        rate1 = linkCap*0.8
     else: 
         rate1 = linkCap*ratio
     rate2 = linkCap - rate1
     #print ratio
-
+    rate2 = 10 * 0.001
     print ("now the min rate for low delay queue is %s", rate1)
     print ("now the min rate for data queue is %s", rate2)
     cmd = 'bash tc_change_diff2.sh %s %s %s ' % (linkCap,rate1,rate2)
+    #cmd = 'bash tc_change_diff2.sh %s %s %s ' % (10,9.999,0.001)
     global q
     q.put(rate1)
     #print intfs
@@ -302,13 +303,21 @@ def extractSwitchID(intf):
     return switches
 SchmittTrigger={}
 qosTrigger = 'CLEAR'
+value = {}
+prev_nLow = 0
+prev_nData = 0
 def applyQdiscMgmt(intf, ipblock, portRange, cToS, linkCap):
+    # e.wait()
+    # e.clear()
     print "------------applyQdiscMgmt------------------"
     qoslock = myGlobal.qoslock
     global prev_flows
+    global prev_nLow
+    global prev_nData
     global SchmittTrigger
     global qosTrigger
     global qab
+    global value 
     switches = extractSwitchID(intf)
     for sw in switches.keys():
         flowList = []
@@ -326,17 +335,17 @@ def applyQdiscMgmt(intf, ipblock, portRange, cToS, linkCap):
                     if (flow['lowDelay']):
                         flowList.append([flow['serverIP'],flow['serverPort'],flow['clientIP'],flow['clientPort'],flow['lowDelay'],flow['outPort']])
         #key value pair                
-        for key, value in switches[sw][0].items():#for each port of a switch
-            ratio, a,b = flowsMetaData(flowList ,value['port'])
-            # print value['port']+':'
+        # for key, value in switches[sw][0].items():#for each port of a switch
+        #     ratio, a,b = flowsMetaData(flowList ,value['port'])
+        #     # print value['port']+':'
 
-            print '--------the ratio, number of videos, number of data is shown below:----------'
-            print ratio, a, b
-            value['nVideo']=a
-            value['nData']=b
-            print value 
-            qab.put(value)
-            switches[sw][0][key] = value                    
+        #     print '--------the ratio, number of videos, number of data is shown below:----------'
+        #     print ratio, a, b
+        #     value['nVideo']=a
+        #     value['nData']=b
+        #     print value 
+        #     qab.put(value)
+        #     switches[sw][0][key] = value                    
         #print switches[sw][0] 
         print "--------------flowList-------------"         
         print flowList
@@ -349,21 +358,30 @@ def applyQdiscMgmt(intf, ipblock, portRange, cToS, linkCap):
             else:
                 qosTrigger= 'INIT'
 
+            value['nVideo'] =prev_nLow
+            value['nData'] = prev_nData
+
             if qosTrigger=='INIT':
                 SchmittTrigger[flowListString] = 0
                 qosTrigger='WAIT'
             elif qosTrigger == 'WAIT':
                 SchmittTrigger[flowListString] += 1
-                if SchmittTrigger[flowListString] >= 4:
+                if SchmittTrigger[flowListString] >= 5:
                     qosTrigger='CHANGE'
             elif qosTrigger == 'CHANGE':
                 ratio,nLow,nData = flowsMetaData(flowList, '2')
+                value['nVideo']=nLow
+                value['nData']=nData
+                switches[sw][0]['s1-eth2'] = value 
                 changeQdisc(float(linkCap), ratio, switches[sw][0])
                 print "flows have been changed"
                 SchmittTrigger = {}
                 qosTrigger ='CLEAR'
             else:
                 pass
+            qab.put(value)
+            prev_nLow = value['nVideo']
+            prev_nData = value['nData']
         prev_flows[sw] = flowList   
         qoslock.release()
     # result = tcQoS(switches[sw][0])
@@ -430,7 +448,9 @@ class QoSTimer(threading.Thread):
             while self.keeprunning > 0:
                 intflist = 's1-eth2'
                 #linkcap = 0.5
-                applyQdiscMgmt(intflist,'10.0.0.2/32','8000-8100',False,'10')
+                time.sleep(0.01)
+                applyQdiscMgmt(intflist,'10.0.0.2/32','8001-8100',False,'10')
+
                 #self.keeprunning-=1
         except KeyboardInterrupt:
             print "stoptimer"

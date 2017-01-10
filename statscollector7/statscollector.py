@@ -3,6 +3,8 @@ from json import dumps
 from requestmanager import *
 from myGlobal import myGlobal
 import os.path
+import json
+from tcshow import *
 @route('/hello')
 def hello():
     return "Hello World!"
@@ -30,6 +32,24 @@ def get_path_stats(start_ip, end_ip,earliest_idx,num_entries):
    result = dumps(jpip_stats)
    print "I have been called"
    return result
+
+@route("/stats/showqos", method='GET')
+def get_qos():
+   qos_stats = []
+   # start_QoS()
+   global summaryq
+   summarylock = myGlobal.summarylock
+   summarylock.acquire()
+   while not summaryq.empty():
+      qos_stats.append(summaryq.get())
+   summarylock.release()
+   # print qos_stats
+   result = dumps(qos_stats)
+
+   with open('result.json', 'w') as outfile:
+       json.dump(qos_stats, outfile)      
+
+   return result 
 
 def find_link_cap(start_ip,end_ip):
    if start_ip == "10.0.0.2":

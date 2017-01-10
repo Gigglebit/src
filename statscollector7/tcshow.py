@@ -5,6 +5,7 @@ import subprocess
 import threading
 import Queue
 from myGlobal import myGlobal
+summaryq = Queue.Queue()
 #from threading import *
 ############################
 # This is a simple function for extracting useful info from tc -s qdisc show
@@ -49,7 +50,7 @@ def tcshow (e):
     # wait until being waken up
     e.wait()
     e.clear()
-    
+    summarylock = myGlobal.summarylock
     # grab the locker and idx
     tclock = myGlobal.tclock
     idx = myGlobal.idx
@@ -80,19 +81,45 @@ def tcshow (e):
     netem_entry = [dict(zip(netem_keys,row)) for row in matches_d2]
     #print matches_d2
     #save everything into a tc_dict{idx:{dev1:{'RootNo':...},dev2:{'RootNo':...}}}
+    SentB_10 = 0
+    BackP_10 = 0
     for item in entry:
     	#print item
         for netem_item in netem_entry:
-	    if netem_item['Dev']==item['Dev']:
-		item.update({'P_Delay':netem_item['P_Delay']})
+            if netem_item['Dev']==item['Dev']:
+                item.update({'P_Delay':netem_item['P_Delay']})
                 t = netem_item['BackB']
                 if t.endswith('K'):
-		  t = t[0:len(t)-1] + "000"
-		if t.endswith('M'):
-                  t = t[0:len(t)-1] + "000000"
-		item.update({'BackB':t}) 
-        item.update({'delta_t': delta_t})
-        dev_keys.append(item['Dev'])
+                    t = t[0:len(t)-1] + "000"
+                if t.endswith('M'):
+                    t = t[0:len(t)-1] + "000000"
+                item.update({'BackB':t}) 
+                item.update({'delta_t': delta_t})
+                if netem_item['Dev']=='s1-eth2' and netem_item['RootNo'] == '10':
+                    summary = [] #curr_t, delta_t, sentB(video), sentB(non-video), backloggedPackets(video), backloggedPackets(non-video),num of video, num of non-video flows
+                    summary.append(curr_t)
+                    summary.append(delta_t)
+                    summary.append(SentB_10)
+                    summary.append(netem_item['SentB'])
+                    summary.append(BackP_10)
+                    summary.append(netem_item['BackP'])
+                    summarylock.acquire()
+                    summaryq.put(summary)
+                    print '------------------summary!!!!------------------'
+                    print summary
+                    summarylock.release()
+        dev_keys.append(item['Dev'])                
+  #       for netem_item in netem_entry:
+	 #    if netem_item['Dev']==item['Dev']:
+		# item.update({'P_Delay':netem_item['P_Delay']})
+  #               t = netem_item['BackB']
+  #               if t.endswith('K'):
+		#   t = t[0:len(t)-1] + "000"
+		# if t.endswith('M'):
+  #                 t = t[0:len(t)-1] + "000000"
+		# item.update({'BackB':t}) 
+  #       item.update({'delta_t': delta_t})
+  #       dev_keys.append(item['Dev'])
     
     #lock tc_dict and update it
     tclock.acquire()
