@@ -1,1 +1,4 @@
-iperf3: parameter error - some option you are trying to set is client only
+------------------------------------------------------------
+Server listening on TCP port 5101
+TCP window size: 32.0 MByte (WARNING: requested 16.0 MByte)
+------------------------------------------------------------

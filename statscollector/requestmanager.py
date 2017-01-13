@@ -204,7 +204,7 @@ def start_monitor():
 
 if __name__ == '__main__':
 	e = threading.Event()
-	counter = 200
+	counter = 200*10
 	t1 = TControl(e,counter)
 	t2 = Timer1(e,0.05,counter)
 	t1.start()

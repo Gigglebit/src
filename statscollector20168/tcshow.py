@@ -197,23 +197,26 @@ def flowsMetaData(flows, outPort):
         ratio = 0.0
     return ratio, nLowDelay, nNonLow 
 
-def changeQdisc(linkCap, ratio, intfs):
+def changeQdisc(linkCap, ratio, intfs, nLowDelay):
     rate1 = 0.02
     print "The ratio of no. of low delay/no. of total is: "+str(ratio)
     if ratio < 0.2 :
         rate1 = linkCap*0.2
-    elif ratio > 0.8 :
-        rate1 = linkCap*0.8
+    elif ratio > 0.99 :
+        rate1 = linkCap*0.99
     else: 
         rate1 = linkCap*ratio
     rate2 = linkCap - rate1
     #print ratio
-    rate2 = 10 * 0.001
+    # rate2 = 10 * 0.001
     print ("now the min rate for low delay queue is %s", rate1)
     print ("now the min rate for data queue is %s", rate2)
     cmd = 'bash tc_change_diff2.sh %s %s %s ' % (linkCap,rate1,rate2)
     #cmd = 'bash tc_change_diff2.sh %s %s %s ' % (10,9.999,0.001)
     global q
+    # if nLowDelay!=0:
+    #     q.put(rate1/nLowDelay)
+    # else:
     q.put(rate1)
     #print intfs
     for intf in intfs.keys():
@@ -240,6 +243,8 @@ def detectflows(intf, servIP, portRange, cToS):
     result = subprocess.check_output(tccmd,shell=True)
     portTrueRange = findPortMinMax(portRange)
     # print "-----------detect flows---------------"
+    iperf_server='10.0.0.3'
+    visited_server_port = []    
     for item in result.split('\n'):
         elem = item.split(',')
         #print elem
@@ -250,18 +255,24 @@ def detectflows(intf, servIP, portRange, cToS):
         elif elem[8]=='udp' or 'tcp':
            #print '---------flows--------'
            #print elem
-           if int(elem[6].split('=')[1]) < 1:
+           #if int(elem[6].split('=')[1]) < 1:
                if (cToS):
                     servPort = elem[-1].split(' ')[0].split('=')[1]
                     # print "this server port and port range are"
                     # print servPort,portTrueRange
-                    if IPAddress(elem[-4].split('=')[1]) in IPNetwork(servIP) and int(servPort) in portTrueRange:
+                    if IPAddress(elem[-4].split('=')[1]) in IPNetwork(servIP) and int(servPort) in portTrueRange and elem[8]=='udp':
+                        if int(elem[6].split('=')[1]) < 1:
                             flow = {'serverIP':elem[-4].split('=')[1], 'serverPort':servPort, 'clientIP':elem[-5].split('=')[1], 'clientPort':elem[-2].split('=')[1], 'durations':elem[1].split('=')[1], 'packets':elem[3].split('=')[1], 'bytes':elem[4].split('=')[1], 'outPort':elem[-1].split(' ')[1].split(':')[1],'lowDelay':True}
                             flows.append(flow)
                             
                     else :
+                        if IPAddress(elem[-5].split('=')[1]) in IPNetwork(iperf_server) and elem[8]=='tcp' and int(elem[6].split('=')[1]) < 3:
                             flow = {'serverIP':elem[-4].split('=')[1], 'serverPort':servPort, 'clientIP':elem[-5].split('=')[1], 'clientPort':elem[-2].split('=')[1], 'durations':elem[1].split('=')[1], 'packets':elem[3].split('=')[1], 'bytes':elem[4].split('=')[1], 'outPort':elem[-1].split(' ')[1].split(':')[1],'lowDelay':False}
                             flows.append(flow)
+                            clientPort = elem[-1].split(' ')[0].split('=')[1] 
+                            if clientPort not in visited_server_port:
+                                visited_server_port.append(clientPort)
+                                flows.append(flow)
                             #print flow      
                else:
                     servPort = elem[-2].split('=')[1]
@@ -272,12 +283,17 @@ def detectflows(intf, servIP, portRange, cToS):
                         # print elem
                         continue
 
-                    if IPAddress(elem[-5].split('=')[1]) in IPNetwork(servIP) and int(servPort) in portTrueRange:
+                    if IPAddress(elem[-5].split('=')[1]) in IPNetwork(servIP) and int(servPort) in portTrueRange and elem[8]=='udp':
+                        if int(elem[6].split('=')[1]) < 1:
                             flow = {'serverIP':elem[-5].split('=')[1], 'serverPort':servPort, 'clientIP':elem[-4].split('=')[1], 'clientPort':elem[-1].split(' ')[0].split('=')[1], 'durations':elem[1].split('=')[1], 'packets':elem[3].split('=')[1], 'bytes':elem[4].split('=')[1], 'outPort':elem[-1].split(' ')[1].split(':')[1],'lowDelay':True}
                             flows.append(flow)
-                    else :       
+                    else :  
+                        if IPAddress(elem[-4].split('=')[1]) in IPNetwork(iperf_server) and elem[8]=='tcp' and int(elem[6].split('=')[1]) < 3:    
                             flow = {'serverIP':elem[-5].split('=')[1], 'serverPort':servPort, 'clientIP':elem[-4].split('=')[1], 'clientPort':elem[-1].split(' ')[0].split('=')[1], 'durations':elem[1].split('=')[1], 'packets':elem[3].split('=')[1], 'bytes':elem[4].split('=')[1],'outPort':elem[-1].split(' ')[1].split(':')[1], 'lowDelay':False}
-                            flows.append(flow)
+                            clientPort = elem[-1].split(' ')[0].split('=')[1] 
+                            if clientPort not in visited_server_port:
+                                visited_server_port.append(clientPort)
+                                flows.append(flow)
     # print flows
     # print "------------------finished detect flows---------------------"    
     return flows
@@ -373,7 +389,7 @@ def applyQdiscMgmt(intf, ipblock, portRange, cToS, linkCap):
                 value['nVideo']=nLow
                 value['nData']=nData
                 switches[sw][0]['s1-eth2'] = value 
-                changeQdisc(float(linkCap), ratio, switches[sw][0])
+                changeQdisc(float(linkCap), ratio, switches[sw][0],nLow)
                 print "flows have been changed"
                 SchmittTrigger = {}
                 qosTrigger ='CLEAR'
@@ -450,6 +466,7 @@ class QoSTimer(threading.Thread):
                 #linkcap = 0.5
                 time.sleep(0.01)
                 applyQdiscMgmt(intflist,'10.0.0.2/32','8001-8100',False,'10')
+                #self.keeprunning-=1
 
                 #self.keeprunning-=1
         except KeyboardInterrupt:

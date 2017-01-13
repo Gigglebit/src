@@ -62,10 +62,10 @@ def generateNumOfFlowXY(content, index_X, index_Y):
          cumulative_time = 0.0
          x_axis.append(cumulative_time)
          #rate= 0.0
-         init_flows = float(content[0][index_Y])
+         init_flows = float(content[1][index_Y])
          y_axis.append(init_flows)
          for i in range(len(content)):
-                if i != 0:
+                if i != 0 and i != 1:
                         # cal time
                         delta_time = float(content[i][index_X])
                                 # cal rate
@@ -84,8 +84,10 @@ ax1 = fig.add_subplot(211)
 ax1.plot(rate1_X, rate1_Y, 'r')
 ax1.plot(rate2_X, rate2_Y, 'b')
 
-nVideo_X, nVideo_Y = generateNumOfFlowXY(content, 1, -2)
-nData_X, nData_Y = generateNumOfFlowXY(content, 1, -1)
+#nVideo_X, nVideo_Y = generateNumOfFlowXY(content, 1, -2)
+#nData_X, nData_Y = generateNumOfFlowXY(content, 1, -1)
+nVideo_X, nVideo_Y = generateNumOfFlowXY(content, 1, -4)
+nData_X, nData_Y = generateNumOfFlowXY(content, 1, -3)
 ax2 = fig.add_subplot(212)
 ax2.plot(nVideo_X, nVideo_Y, 'r')
 ax2.plot(nData_X, nData_Y, 'b')

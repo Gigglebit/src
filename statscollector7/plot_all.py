@@ -23,7 +23,7 @@ def generateDetailedRateXY(content,index_X,index_Y):
             cumulative_time = cumulative_time+float(delta_time)
             # cal rate
             curr_byte = float(content[i][index_Y])
-            rate = (curr_byte - prev_byte)*8/delta_time/1024
+            rate = (curr_byte - prev_byte)*8/delta_time/1000
             prev_byte = curr_byte
             x_axis.append(cumulative_time)
             y_axis.append(rate)
@@ -48,7 +48,7 @@ def generateAveragedRateXY(content,index_X,index_Y):
                   pass
                else:
                   curr_total_byte = float(content[i][index_Y])
-                  rate = (curr_total_byte-prev_total_byte)*8/interval/1024/1024  #Mbps
+                  rate = (curr_total_byte-prev_total_byte)*8/interval/1000/1000  #Mbps
                   prev_total_byte = curr_total_byte
                   x_axis.append(end_time)
                   y_axis.append(rate)

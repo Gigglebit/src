@@ -53,6 +53,7 @@ parser.add_argument('--delay',
 parser.add_argument('--maxq',
                     dest="maxq",
                     action="store",
+                    type=int,
                     help="Max buffer size of network interface in packets",
                     default=1000)
 
@@ -154,7 +155,7 @@ def Test():
    #h1.cmd("bash tc_cmd_diff.sh h1-eth0")
    #h1.cmd("tc -s show dev h1-eth0")
    print "Differentiate Traffic Between iperf and wget"
-   os.system("bash tc_diff.sh %s %s %s" % (args.btn,args.btn*0.001,args.btn*0.001))
+   os.system("bash tc_diff.sh %s %s %s" % (args.btn,args.btn*0.5,args.btn*0.5))
    #os.system("bash tc_diff_twoqmax.sh %s %s %s" % (args.btn,args.btn*0.001,args.btn*0.001))
    #h1.cmd('cd ./http/; python2.7 ./webserver.py &')
    #h1.cmd('cd ../')
@@ -162,7 +163,7 @@ def Test():
    for i in xrange(16):
        iperf_cmd=iperf_cmd_raw %(5001+i,5001+i)
        h2.cmd(iperf_cmd)
-   iperf_cmd_raw = 'iperf3 -s -p %s -u -i 1 > iperf-recv-%s.txt &'
+   iperf_cmd_raw = 'iperf -s -w 16m -p %s -i 1 > iperf-recv-%s.txt &'
    for i in xrange(4):
        iperf_cmd=iperf_cmd_raw %(5101+i,5101+i)
        h2.cmd(iperf_cmd)

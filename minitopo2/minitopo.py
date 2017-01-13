@@ -52,6 +52,7 @@ parser.add_argument('--delay',
 parser.add_argument('--maxq',
                     dest="maxq",
                     action="store",
+                    type=int,
                     help="Max buffer size of network interface in packets",
                     default=1000)
 
@@ -86,8 +87,8 @@ class SimpleTopo(Topo):
        self.addLink( s1, h1, bw=int(args.hs_bw))
        self.addLink( s2, h2, bw=int(args.hs_bw))
 
-       self.addLink( s1, s3, bw=int(args.btn), delay=1) # 1us in order to show the backlog num of bytes
-       self.addLink( s4, s2, bw=int(args.btn), delay=1) # 1us in order to show the backlog num of bytes
+       self.addLink( s1, s3, bw=int(args.btn), delay=1, max_queue_size=args.maxq) # 1us in order to show the backlog num of bytes
+       self.addLink( s4, s2, bw=int(args.btn), delay=1, max_queue_size=args.maxq) # 1us in order to show the backlog num of bytes
 
        self.addLink( s3, s4, bw=int(args.btn),delay=int(args.delay))
        self.addLink( dhcp, s2, bw=int(args.hs_bw))
