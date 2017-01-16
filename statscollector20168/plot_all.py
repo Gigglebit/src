@@ -51,7 +51,7 @@ def generateAveragedRateXY(content,index_X,index_Y):
                   rate = (curr_total_byte-prev_total_byte)*8/interval/1000/1000  #Mbps
                   prev_total_byte = curr_total_byte
                   x_axis.append(end_time)
-                  y_axis.append(rate)
+                  y_axis.append(min(rate,10))
                   end_time = end_time+interval
         return x_axis, y_axis
 

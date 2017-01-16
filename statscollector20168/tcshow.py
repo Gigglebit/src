@@ -6,6 +6,7 @@ import threading
 import Queue
 from myGlobal import myGlobal
 from netaddr import IPNetwork, IPAddress
+from copy import deepcopy
 #from threading import *
 ############################
 # This is a simple function for extracting useful info from tc -s qdisc show
@@ -42,12 +43,16 @@ prev_t = 0
 curr_t = 0
 delta_t = 0
 prev_flows = {}
+recorded_bni = 0
+prev_bni = 0
 matches_d2 = []
 last_min_rate = 4 #initialise the min rate
 q = Queue.Queue() # min-rate pass from qos to tcshow
-qab = Queue.Queue() #number of a flow and b flow
-summaryq = Queue.Queue()
-
+#qab = Queue.Queue() #number of a flow and b flow
+summaryq = Queue.Queue() #summaryq to be saved and plot
+nflow_dict={'nVideo':0, 'nData':0}
+recorded_queued_bytes = 0
+# bniq = Queue.Queue() #bandwidth of non-interactive flows
 def tcshow (e):
     '''
     This function handles a pulling event received from the timer
@@ -62,15 +67,20 @@ def tcshow (e):
     tclock = myGlobal.tclock
     idx = myGlobal.idx
     summarylock = myGlobal.summarylock
-    qoslock = myGlobal.qoslock
+    # qoslock = myGlobal.qoslock
+    # bnilock = myGlobal.bnilock
     # calculate delta_t
     global curr_t
     global prev_t
     global delta_t
     global matches_d2
     global q
-    global qab
+    #global qab
+    global nflow_dict
+    global recorded_bni
     global last_min_rate
+    global prev_bni
+    global recorded_queued_bytes
     entry = []
     curr_t =time.time()
     delta_t = curr_t-prev_t
@@ -84,7 +94,7 @@ def tcshow (e):
     #parse tc show root result
     tccmd = "tc -s qdisc show"
     result = subprocess.check_output(tccmd,shell=True)
-    parse_result = re.compile(r'qdisc\s*[a-zA-Z_]+\s+([0-9]+):\sdev\s([a-zA-Z0-9-]+)\sroot\s[a-zA-Z0-9_.:\s]+Sent\s([\d]+)\sbytes\s([\d]+)\spkt\s\(dropped\s([\d]+),\soverlimits\s([\d]+)\srequeues\s([\d]+)\)\s*backlog\s([\d]+)b+\s([\d]+)p')
+    parse_result = re.compile(r'qdisc\s*[a-zA-Z_]+\s+([0-9]+):\sdev\s([a-zA-Z0-9-]+)\sroot\s[a-zA-Z0-9_.:\s]+Sent\s([\d]+)\sbytes\s([\d]+)\spkt\s\(dropped\s([\d]+),\soverlimits\s([\d]+)\srequeues\s([\d]+)\)\s*backlog\s([\dA-Z]+)b+\s([\d]+)p')
     matches_d = parse_result.findall(result)
     entry = [dict(zip(entry_keys,row)) for row in matches_d]
     #parse tc show parent result
@@ -100,11 +110,11 @@ def tcshow (e):
     SentB_10 = 0
     BackP_10 = 0
 
-    nflow = {}
-    qoslock.acquire()
-    while not qab.empty():
-        nflow = qab.get()
-    qoslock.release()   
+    nflow = deepcopy(nflow_dict)
+    # qoslock.acquire()
+    # while not qab.empty():
+    #     nflow = qab.get()
+    # qoslock.release()   
     for item in entry:
         #print item
         # qoslock.acquire()
@@ -124,14 +134,14 @@ def tcshow (e):
                         item.update({'SentP':netem_item['SentP']})
                         item.update({'BackP':BackP_10})
                         item.update({'RootNo':'10'})
-                        qoslock.acquire()
-                        if q.empty():
-                            item.update({'MinRate':last_min_rate})
-                        else:
-                            while not q.empty():
-                                last_min_rate = q.get()
-                            item.update({'MinRate':last_min_rate})
-                        qoslock.release() 
+                        # qoslock.acquire()
+                        # if q.empty():
+                        #     item.update({'MinRate':last_min_rate})
+                        # else:
+                        #     while not q.empty():
+                        # last_min_rate = q.get()
+                        item.update({'MinRate':last_min_rate})
+                        # qoslock.release() 
                         visited[item['Dev']]=True
             if netem_item['Dev']==item['Dev'] and netem_item['Dev']=='s1-eth2' and netem_item['RootNo'] == '11':
                 summary = [] #curr_t, delta_t, sentB(video), sentB(non-video), backloggedPackets(video), backloggedPackets(non-video),num of video, num of non-video flows
@@ -141,6 +151,17 @@ def tcshow (e):
                 summary.append(netem_item['SentB'])
                 summary.append(BackP_10)
                 summary.append(netem_item['BackP'])
+                # bnilock.acquire()
+                recorded_bni = (float(netem_item['SentB'])-float(prev_bni))*8/delta_t/1000/1000
+                t = netem_item['BackB']
+                if t.endswith('K'):
+                    t = t[0:len(t)-1] + "000"
+                if t.endswith('M'):
+                    t = t[0:len(t)-1] + "000000"
+                recorded_queued_bytes = int(t)
+                # bniq.put(bni)
+                prev_bni = netem_item['SentB']
+                # bnilock.release()
                 if 'nVideo' in nflow:
                     summary.append(nflow['nVideo'])
                     summary.append(nflow['nData'])     
@@ -191,33 +212,56 @@ def flowsMetaData(flows, outPort):
             else:
                 nNonLow = nNonLow + 1
     #print nLowDelay, nNonLow
-    if (nLowDelay+nNonLow!=0):
-        ratio = nLowDelay/(nLowDelay+nNonLow)
-    else : 
-        ratio = 0.0
+    # if (nLowDelay+nNonLow!=0):
+    #     ratio = nLowDelay/(nLowDelay+nNonLow)
+    # else : 
+    #     ratio = 0.0
+    ratio = (nLowDelay+1)/(nLowDelay+nNonLow+2)
     return ratio, nLowDelay, nNonLow 
-
-def changeQdisc(linkCap, ratio, intfs, nLowDelay):
-    rate1 = 0.02
+prev_long1 = 0
+prev_short1 = 0
+def changeQdisc(linkCap, ratio, intfs, nLowDelay, bni, queued_bytes):
+    rate1 = 0.001
+    global prev_long1
+    global prev_short1
+    alphaL = 0.02
+    alphaS = 0.1
     print "The ratio of no. of low delay/no. of total is: "+str(ratio)
-    if ratio < 0.2 :
-        rate1 = linkCap*0.2
-    elif ratio > 0.99 :
-        rate1 = linkCap*0.99
-    else: 
-        rate1 = linkCap*ratio
+    # if ratio < 0.2 :
+    #     rate1 = linkCap*0.2
+    # elif ratio > 0.99 :
+    #     rate1 = linkCap*0.99
+    # else: 
+    #     rate1 = linkCap*ratio
+
+    longterm=(1-alphaL)*prev_long1+alphaL*linkCap*ratio
+    shorterm=0
+    margin = 0.1*linkCap
+    # if linkCap-bni-margin > prev_short1:
+    #     shorterm = linkCap - bni - margin
+    # else:
+    qflag = (queued_bytes!=0)  
+    #shorterm = (1-alphaS)*prev_short1+alphaS*max(linkCap-bni-margin,prev_long1)
+    shorterm = (1-alphaS)*prev_short1+alphaS*(prev_long1 if qflag else linkCap-margin)
+    rate1 = shorterm
+    if rate1 == 0:
+        rate1 = 0.001*linkCap
     rate2 = linkCap - rate1
     #print ratio
-    # rate2 = 10 * 0.001
+    #rate2 = 0.001*linkCap
     print ("now the min rate for low delay queue is %s", rate1)
     print ("now the min rate for data queue is %s", rate2)
     cmd = 'bash tc_change_diff2.sh %s %s %s ' % (linkCap,rate1,rate2)
     #cmd = 'bash tc_change_diff2.sh %s %s %s ' % (10,9.999,0.001)
-    global q
+    prev_long1 = longterm
+    prev_short1 = shorterm
+    #global q
+    global last_min_rate
     # if nLowDelay!=0:
     #     q.put(rate1/nLowDelay)
     # else:
-    q.put(rate1)
+    last_min_rate = rate1
+    #q.put(rate1)
     #print intfs
     for intf in intfs.keys():
         cmd = cmd + intf +" "
@@ -322,9 +366,16 @@ qosTrigger = 'CLEAR'
 value = {}
 prev_nLow = 0
 prev_nData = 0
+
 def applyQdiscMgmt(intf, ipblock, portRange, cToS, linkCap):
     # e.wait()
     # e.clear()
+    global recorded_bni
+
+    bni = recorded_bni
+    #print ("I am getting bni %s", bni)
+
+
     print "------------applyQdiscMgmt------------------"
     qoslock = myGlobal.qoslock
     global prev_flows
@@ -332,15 +383,17 @@ def applyQdiscMgmt(intf, ipblock, portRange, cToS, linkCap):
     global prev_nData
     global SchmittTrigger
     global qosTrigger
-    global qab
-    global value 
+    # global qab
+    # global value 
+    global recorded_queued_bytes
+    print ("I am getting queued bytes %s", recorded_queued_bytes)
     switches = extractSwitchID(intf)
     for sw in switches.keys():
         flowList = []
         #detecting flows
         flows = detectflows(sw, ipblock, portRange, cToS) #
         #filter out flowLists
-        qoslock.acquire()
+        # qoslock.acquire()
         for flow in flows:
             if flow['outPort'] =='2':
                 if IPAddress(flow['serverIP']) not in IPNetwork(ipblock):
@@ -374,32 +427,38 @@ def applyQdiscMgmt(intf, ipblock, portRange, cToS, linkCap):
             else:
                 qosTrigger= 'INIT'
 
-            value['nVideo'] =prev_nLow
-            value['nData'] = prev_nData
+            # value['nVideo'] =prev_nLow
+            # value['nData'] = prev_nData
 
-            if qosTrigger=='INIT':
-                SchmittTrigger[flowListString] = 0
-                qosTrigger='WAIT'
-            elif qosTrigger == 'WAIT':
-                SchmittTrigger[flowListString] += 1
-                if SchmittTrigger[flowListString] >= 5:
-                    qosTrigger='CHANGE'
-            elif qosTrigger == 'CHANGE':
-                ratio,nLow,nData = flowsMetaData(flowList, '2')
-                value['nVideo']=nLow
-                value['nData']=nData
-                switches[sw][0]['s1-eth2'] = value 
-                changeQdisc(float(linkCap), ratio, switches[sw][0],nLow)
-                print "flows have been changed"
-                SchmittTrigger = {}
-                qosTrigger ='CLEAR'
-            else:
-                pass
-            qab.put(value)
-            prev_nLow = value['nVideo']
-            prev_nData = value['nData']
+            # if qosTrigger=='INIT':
+            #     SchmittTrigger[flowListString] = 0
+            #     qosTrigger='WAIT'
+            # elif qosTrigger == 'WAIT':
+            #     SchmittTrigger[flowListString] += 1
+            #     if SchmittTrigger[flowListString] >= 5:
+            #         qosTrigger='CHANGE'
+            # elif qosTrigger == 'CHANGE':
+            ratio,nLow,nData = flowsMetaData(flowList, '2')
+            # value['nVideo']=nLow
+            # value['nData']=nData
+            global nflow_dict
+            nflow_dict['nVideo']=nLow
+            nflow_dict['nData']=nData            
+            switches[sw][0]['s1-eth2'] = value 
+            changeQdisc(float(linkCap), ratio, switches[sw][0],nLow,recorded_bni,recorded_queued_bytes)
+            print "flows have been changed"
+            #     SchmittTrigger = {}
+            #     qosTrigger ='CLEAR'
+            # else:
+            #     pass
+
+            # qab.put(value)
+            # prev_nLow = value['nVideo']
+            # prev_nData = value['nData']
+            prev_nLow = nflow_dict['nVideo']
+            prev_nData = nflow_dict['nData']
         prev_flows[sw] = flowList   
-        qoslock.release()
+        # qoslock.release()
     # result = tcQoS(switches[sw][0])
     # print "---------------tcQoS :%s------------" %sw
     # print result
@@ -462,10 +521,11 @@ class QoSTimer(threading.Thread):
     def run(self):
         try:
             while self.keeprunning > 0:
+                self.event.wait()
                 intflist = 's1-eth2'
                 #linkcap = 0.5
-                time.sleep(0.01)
-                applyQdiscMgmt(intflist,'10.0.0.2/32','8001-8100',False,'10')
+                #time.sleep(0.05)
+                applyQdiscMgmt(intflist,'10.0.0.2/32','8001-8100',False,'5')
                 #self.keeprunning-=1
 
                 #self.keeprunning-=1

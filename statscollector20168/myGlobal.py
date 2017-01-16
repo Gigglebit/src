@@ -9,6 +9,7 @@ class myGlobal(object):
     qoslock = threading.Lock()#thread lock for safe write and read
     tclock = threading.Lock()
     summarylock = threading.Lock()
+    bnilock = threading.Lock()
 
 def round_sigfigs(num, sig_figs):
     """Round to specified number of sigfigs.

@@ -27,9 +27,9 @@ function add_qdisc {
     #tc filter add dev $dev parent 1: protocol ip prio 1 u32 match ip src 10.0.0.2/32 match ip sport 8000 0xffff flowid 1:10
     tc filter add dev $dev parent 1: protocol ip prio 1 u32 match ip dst 10.0.0.2/32 flowid 1:10
     tc filter add dev $dev parent 1: protocol ip prio 1 u32 match ip src 10.0.0.2/32 flowid 1:10
-    tc filter add dev $dev protocol ip parent 1: prio 2 u32 match ip protocol 1 0xff flowid 1:11
-    tc filter add dev $dev protocol ip parent 1: prio 2 u32 match ip protocol 6 0xff flowid 1:11
-    tc filter add dev $dev protocol ip parent 1: prio 2 u32 match ip protocol 17 0xff flowid 1:11
+    tc filter add dev $dev protocol ip parent 1: prio 1 u32 match ip protocol 1 0xff flowid 1:11
+    tc filter add dev $dev protocol ip parent 1: prio 1 u32 match ip protocol 6 0xff flowid 1:11
+    tc filter add dev $dev protocol ip parent 1: prio 1 u32 match ip protocol 17 0xff flowid 1:11
     echo filters added
 }
 
