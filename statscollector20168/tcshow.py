@@ -52,6 +52,8 @@ q = Queue.Queue() # min-rate pass from qos to tcshow
 summaryq = Queue.Queue() #summaryq to be saved and plot
 nflow_dict={'nVideo':0, 'nData':0}
 recorded_queued_bytes = 0
+prev_long1 = 2.5
+prev_short1 = 2.5
 # bniq = Queue.Queue() #bandwidth of non-interactive flows
 def tcshow (e):
     '''
@@ -81,6 +83,8 @@ def tcshow (e):
     global last_min_rate
     global prev_bni
     global recorded_queued_bytes
+    global prev_long1
+    global prev_short1
     entry = []
     curr_t =time.time()
     delta_t = curr_t-prev_t
@@ -108,7 +112,7 @@ def tcshow (e):
     #save everything into a tc_dict{idx:{dev1:{'RootNo':...},dev2:{'RootNo':...}}}
     visited = {}
     SentB_10 = 0
-    BackP_10 = 0
+    BackB_10 = 0
 
     nflow = deepcopy(nflow_dict)
     # qoslock.acquire()
@@ -129,10 +133,10 @@ def tcshow (e):
                 item.update({'BackB':t}) 
                 if netem_item['RootNo']=='10':
                         SentB_10 = netem_item['SentB']
-                        BackP_10 = netem_item['BackP']
+                        BackB_10 = t
                         item.update({'SentB':SentB_10})
                         item.update({'SentP':netem_item['SentP']})
-                        item.update({'BackP':BackP_10})
+                        item.update({'BackP':netem_item['BackP']})
                         item.update({'RootNo':'10'})
                         # qoslock.acquire()
                         # if q.empty():
@@ -149,8 +153,15 @@ def tcshow (e):
                 summary.append(delta_t)
                 summary.append(SentB_10)
                 summary.append(netem_item['SentB'])
-                summary.append(BackP_10)
-                summary.append(netem_item['BackP'])
+                summary.append(prev_long1)
+                summary.append(prev_short1)
+                summary.append(BackB_10)
+                t = netem_item['BackB']
+                if t.endswith('K'):
+                    t = t[0:len(t)-1] + "000"
+                if t.endswith('M'):
+                    t = t[0:len(t)-1] + "000000"
+                summary.append(t)
                 # bnilock.acquire()
                 recorded_bni = (float(netem_item['SentB'])-float(prev_bni))*8/delta_t/1000/1000
                 t = netem_item['BackB']
@@ -218,8 +229,7 @@ def flowsMetaData(flows, outPort):
     #     ratio = 0.0
     ratio = (nLowDelay+1)/(nLowDelay+nNonLow+2)
     return ratio, nLowDelay, nNonLow 
-prev_long1 = 0
-prev_short1 = 0
+
 def changeQdisc(linkCap, ratio, intfs, nLowDelay, bni, queued_bytes):
     rate1 = 0.001
     global prev_long1
@@ -305,12 +315,12 @@ def detectflows(intf, servIP, portRange, cToS):
                     # print "this server port and port range are"
                     # print servPort,portTrueRange
                     if IPAddress(elem[-4].split('=')[1]) in IPNetwork(servIP) and int(servPort) in portTrueRange and elem[8]=='udp':
-                        if int(elem[6].split('=')[1]) < 1:
+                        if int(elem[6].split('=')[1]) < 2:
                             flow = {'serverIP':elem[-4].split('=')[1], 'serverPort':servPort, 'clientIP':elem[-5].split('=')[1], 'clientPort':elem[-2].split('=')[1], 'durations':elem[1].split('=')[1], 'packets':elem[3].split('=')[1], 'bytes':elem[4].split('=')[1], 'outPort':elem[-1].split(' ')[1].split(':')[1],'lowDelay':True}
                             flows.append(flow)
                             
                     else :
-                        if IPAddress(elem[-5].split('=')[1]) in IPNetwork(iperf_server) and elem[8]=='tcp' and int(elem[6].split('=')[1]) < 3:
+                        if IPAddress(elem[-5].split('=')[1]) in IPNetwork(iperf_server) and elem[8]=='tcp' and int(elem[6].split('=')[1]) < 5 and elem[-1].split(' ')[1].split(':')[1] =='2':
                             flow = {'serverIP':elem[-4].split('=')[1], 'serverPort':servPort, 'clientIP':elem[-5].split('=')[1], 'clientPort':elem[-2].split('=')[1], 'durations':elem[1].split('=')[1], 'packets':elem[3].split('=')[1], 'bytes':elem[4].split('=')[1], 'outPort':elem[-1].split(' ')[1].split(':')[1],'lowDelay':False}
                             flows.append(flow)
                             clientPort = elem[-1].split(' ')[0].split('=')[1] 
@@ -328,11 +338,11 @@ def detectflows(intf, servIP, portRange, cToS):
                         continue
 
                     if IPAddress(elem[-5].split('=')[1]) in IPNetwork(servIP) and int(servPort) in portTrueRange and elem[8]=='udp':
-                        if int(elem[6].split('=')[1]) < 1:
+                        if int(elem[6].split('=')[1]) < 2:
                             flow = {'serverIP':elem[-5].split('=')[1], 'serverPort':servPort, 'clientIP':elem[-4].split('=')[1], 'clientPort':elem[-1].split(' ')[0].split('=')[1], 'durations':elem[1].split('=')[1], 'packets':elem[3].split('=')[1], 'bytes':elem[4].split('=')[1], 'outPort':elem[-1].split(' ')[1].split(':')[1],'lowDelay':True}
                             flows.append(flow)
                     else :  
-                        if IPAddress(elem[-4].split('=')[1]) in IPNetwork(iperf_server) and elem[8]=='tcp' and int(elem[6].split('=')[1]) < 3:    
+                        if IPAddress(elem[-4].split('=')[1]) in IPNetwork(iperf_server) and elem[8]=='tcp' and int(elem[6].split('=')[1]) < 5 and elem[-1].split(' ')[1].split(':')[1] =='2':    
                             flow = {'serverIP':elem[-5].split('=')[1], 'serverPort':servPort, 'clientIP':elem[-4].split('=')[1], 'clientPort':elem[-1].split(' ')[0].split('=')[1], 'durations':elem[1].split('=')[1], 'packets':elem[3].split('=')[1], 'bytes':elem[4].split('=')[1],'outPort':elem[-1].split(' ')[1].split(':')[1], 'lowDelay':False}
                             clientPort = elem[-1].split(' ')[0].split('=')[1] 
                             if clientPort not in visited_server_port:

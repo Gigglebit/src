@@ -10,16 +10,16 @@ def run_iperf(num,duration,sleep):
     	#	tmp = raw_command %(sleep,5001+i,duration,5001+i)
     	#	commands.append(tmp)
     	#	print tmp
-	tmp = raw_command %(0,5001+0,65,5001+0)
+	tmp = raw_command %(15,5001+0,90,5001+0)
 	commands.append(tmp)
 	# tmp = raw_command %(0,5001+1,60,5001+1)
 	# commands.append(tmp)
-	tmp = raw_command %(20,5001+2,45,5001+2)
+	tmp = raw_command %(30,5001+1,60,5001+1)
 	commands.append(tmp)
 	# tmp = raw_command %(20,5001+3,40,5001+3)
 	# commands.append(tmp)
-	tmp = raw_command %(40,5001+4,25,5001+4)
-	commands.append(tmp)
+	# tmp = raw_command %(54,5001+2,18,5001+2)
+	# commands.append(tmp)
 	# tmp = raw_command %(40,5001+5,20,5001+5)
 	# commands.append(tmp)
 
@@ -45,6 +45,6 @@ def run_iperf(num,duration,sleep):
                 			break
 
 #time.sleep(20)
-run_iperf(3,60,0)
+run_iperf(2,90,0)
 #run_iperf(1,20,0)
 #run_iperf(3,20,0)

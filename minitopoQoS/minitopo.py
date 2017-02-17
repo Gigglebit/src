@@ -160,13 +160,13 @@ def Test():
    #h1.cmd('cd ./http/; python2.7 ./webserver.py &')
    #h1.cmd('cd ../')
    iperf_cmd_raw = 'iperf3 -s -p %s -i 1 > iperf-recv-%s.txt &'
-   for i in xrange(16):
+   for i in xrange(3):
        iperf_cmd=iperf_cmd_raw %(5001+i,5001+i)
        h2.cmd(iperf_cmd)
-   iperf_cmd_raw = 'iperf -s -w 16m -p %s -i 1 > iperf-recv-%s.txt &'
-   for i in xrange(4):
-       iperf_cmd=iperf_cmd_raw %(5101+i,5101+i)
-       h2.cmd(iperf_cmd)
+   # iperf_cmd_raw = 'iperf -s -w 16m -p %s -i 1 > iperf-recv-%s.txt &'
+   # for i in xrange(4):
+   #     iperf_cmd=iperf_cmd_raw %(5101+i,5101+i)
+   #     h2.cmd(iperf_cmd)
 
    #h2.cmd('iperf -s -w 16m -p 5001 -i 1 > iperf-recv.txt &')
    #h2.cmd('iperf -s -p 5001 -i 1 > iperf-recv_TCP.txt &')

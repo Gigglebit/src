@@ -102,7 +102,12 @@ def tcshow (e):
                     summary.append(SentB_10)
                     summary.append(netem_item['SentB'])
                     summary.append(BackP_10)
-                    summary.append(netem_item['BackP'])
+                    t = netem_item['BackB']
+                    if t.endswith('K'):
+                        t = t[0:len(t)-1] + "000"
+                    if t.endswith('M'):
+                        t = t[0:len(t)-1] + "000000"
+                    summary.append(t)
                     summarylock.acquire()
                     summaryq.put(summary)
                     print '------------------summary!!!!------------------'
